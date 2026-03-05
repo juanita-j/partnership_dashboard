@@ -21,10 +21,12 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email) return null;
         const email = credentials.email.trim().toLowerCase();
-        if (!ALLOWED_EMAILS.length) {
-          return { id: "1", email, name: email, role: "editor" };
+        // 프로덕션에서는 허용 이메일 목록이 반드시 있어야 함(미설정 시 누구나 로그인 가능 방지)
+        const isProduction = process.env.NODE_ENV === "production";
+        if (isProduction && !ALLOWED_EMAILS.length) {
+          return null;
         }
-        if (!ALLOWED_EMAILS.includes(email)) {
+        if (ALLOWED_EMAILS.length && !ALLOWED_EMAILS.includes(email)) {
           return null;
         }
         let user = await prisma.user.findUnique({ where: { email } });
