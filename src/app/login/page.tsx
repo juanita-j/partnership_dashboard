@@ -10,28 +10,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function LoginForm() {
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  const errorParam = searchParams.get("error");
+  const error = errorParam === "CredentialsSignin" || errorParam === "Callback" ? "비밀번호가 올바르지 않습니다." : "";
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
     setLoading(true);
-    try {
-      const res = await signIn("credentials", {
-        password,
-        redirect: false,
-      });
-      if (res?.error) {
-        setError("비밀번호가 올바르지 않습니다.");
-        return;
-      }
-      window.location.href = callbackUrl;
-    } finally {
-      setLoading(false);
-    }
+    await signIn("credentials", {
+      password,
+      callbackUrl,
+      redirect: true,
+    });
+    setLoading(false);
   }
 
   return (
