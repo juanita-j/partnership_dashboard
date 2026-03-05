@@ -1,15 +1,10 @@
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import Link from "next/link";
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) redirect("/login");
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b bg-card px-4 py-3 flex items-center justify-between">
@@ -25,15 +20,6 @@ export default async function DashboardLayout({
               회사명 매핑
             </Link>
           </nav>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">{session.user.email}</span>
-          <span className="text-xs px-2 py-0.5 rounded bg-muted">
-            {(session.user as { role?: string }).role === "editor" ? "편집" : "보기"}
-          </span>
-          <Link href="/api/auth/signout?callbackUrl=/login" className="text-sm text-muted-foreground hover:text-foreground">
-            로그아웃
-          </Link>
         </div>
       </header>
       <main className="flex-1 p-4">

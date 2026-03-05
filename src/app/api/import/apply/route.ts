@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { isEditor } from "@/lib/role";
 import { prisma } from "@/lib/prisma";
 import type { MergeDiffItem } from "@/lib/excel-import";
 
 /** Merge: 비어있지 않은 컬럼만 업데이트. history에 변경 로그 append */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (!isEditor((session.user as { role?: string }).role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
     const body = await req.json();
     const diff = body.diff as MergeDiffItem[] | undefined;
     if (!Array.isArray(diff)) {

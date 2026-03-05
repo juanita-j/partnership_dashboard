@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,19 +19,17 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
-import { isEditor } from "@/lib/role";
 import { toast } from "sonner";
 
 type AliasRow = { id: string; normalizedName: string; alias: string; locale: string };
 
 export default function CompanyAliasPage() {
-  const { data: session } = useSession();
   const [list, setList] = useState<AliasRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ normalizedName: "", alias: "", locale: "" });
   const [saving, setSaving] = useState(false);
-  const editor = session?.user && isEditor((session.user as { role?: string }).role);
+  const editor = true;
 
   const load = () => {
     fetch("/api/company-alias")

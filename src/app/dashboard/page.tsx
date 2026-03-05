@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { FilterBar } from "@/components/filter-bar";
 import { PartnersTable } from "@/components/partners-table";
@@ -9,7 +8,6 @@ import { PartnerDetailSheet } from "@/components/partner-detail-sheet";
 import { ExcelUploadDialog } from "@/components/excel-upload-dialog";
 import { Button } from "@/components/ui/button";
 import { Upload, Plus, Download } from "lucide-react";
-import { isEditor } from "@/lib/role";
 import type { FilterState } from "./types";
 import { defaultFilters } from "./types";
 
@@ -58,13 +56,12 @@ function filtersToSearchParams(f: FilterState): URLSearchParams {
 }
 
 export default function DashboardPage() {
-  const { data: session } = useSession();
   const searchParams = useSearchParams();
   const [filters, setFiltersState] = useState<FilterState>(defaultFilters);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const [excelOpen, setExcelOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const editor = session?.user && isEditor((session.user as { role?: string }).role);
+  const editor = true;
 
   useEffect(() => {
     setFiltersState(filtersFromSearchParams(searchParams));

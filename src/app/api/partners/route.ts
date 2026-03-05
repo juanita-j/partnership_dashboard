@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { partnerCreateSchema } from "@/lib/validations";
-import { isEditor } from "@/lib/role";
 import type { Prisma } from "@prisma/client";
 
 const YEARS = [2023, 2024, 2025] as const;
@@ -46,10 +43,6 @@ function toEventsByYear(
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
@@ -144,13 +137,6 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (!isEditor((session.user as { role?: string }).role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
     const body = await req.json();
     const parsed = partnerCreateSchema.safeParse(body);
     if (!parsed.success) {

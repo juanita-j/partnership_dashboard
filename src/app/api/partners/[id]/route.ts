@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { partnerUpdateSchema, EMPLOYMENT_STATUS_ENUM } from "@/lib/validations";
-import { isEditor } from "@/lib/role";
 
 const YEARS = [2023, 2024, 2025];
 
@@ -48,10 +45,6 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const { id } = await params;
     const partner = await prisma.partner.findUnique({
       where: { id },
@@ -73,13 +66,6 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (!isEditor((session.user as { role?: string }).role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
     const { id } = await params;
     const body = await req.json();
     const parsed = partnerUpdateSchema.partial().safeParse(body);
@@ -125,13 +111,6 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (!isEditor((session.user as { role?: string }).role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
     const { id } = await params;
     const body = await req.json();
     const parsed = partnerUpdateSchema.safeParse(body);
@@ -172,13 +151,6 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if (!isEditor((session.user as { role?: string }).role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
     const { id } = await params;
     await prisma.partner.delete({ where: { id } });
     return NextResponse.json({ success: true });
