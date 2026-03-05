@@ -240,7 +240,7 @@ export function PartnersTable({ filters, refreshKey, onSelectPartner, onRefresh,
   }, [filters, refreshKey, currentPage]);
 
   const showOptional = OPTIONAL_HEADERS.filter((h) => filters.showColumns.includes(h.id));
-  const expandedOptional = showOptional.flatMap((h) => {
+  const expandedOptional: { id: string; label: string }[] = showOptional.flatMap((h) => {
     if (h.id === "inviter") return INVITER_COL_IDS.map((colId) => ({ id: colId, label: DAN_HEADERS.find((d) => d.id === colId)!.label }));
     if (h.id === "giftSender") return GIFT_SENDER_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS.find((g) => g.id === colId)!.label }));
     if (h.id === "giftItem") return GIFT_ITEM_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS.find((g) => g.id === colId)!.label }));
