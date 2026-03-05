@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { FilterBar } from "@/components/filter-bar";
 import { PartnersTable } from "@/components/partners-table";
@@ -55,7 +55,7 @@ function filtersToSearchParams(f: FilterState): URLSearchParams {
   return p;
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const searchParams = useSearchParams();
   const [filters, setFiltersState] = useState<FilterState>(defaultFilters);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
@@ -132,5 +132,13 @@ export default function DashboardPage() {
       />
       <ExcelUploadDialog open={excelOpen} onClose={() => setExcelOpen(false)} onApplied={refresh} />
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="p-4">로딩 중...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
