@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+import { withAuth } from "next-auth/middleware";
 
-export function middleware() {
-  return NextResponse.next();
-}
+export default withAuth({
+  pages: { signIn: "/login" },
+});
 
 export const config = {
   matcher: ["/", "/dashboard/:path*", "/dashboard"],

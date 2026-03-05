@@ -4,7 +4,7 @@
 
 ## 접근 제어 및 데이터 보안
 
-- **로그인**: 이메일은 구분용이며, **비밀번호만 맞으면** 누구나 로그인 가능. 비밀번호는 환경 변수 `LOGIN_PASSWORD`에 설정한 값과 일치해야 합니다.
+- **로그인**: **비밀번호만** 입력하면 됩니다. 환경 변수 `LOGIN_PASSWORD`에 넣은 값과 일치해야 대시보드를 볼 수 있습니다.
 - **프로덕션 필수**: 프로덕션(`NODE_ENV=production`)에서는 `LOGIN_PASSWORD`를 **반드시 설정**해야 합니다. 비어 있으면 로그인이 모두 거부됩니다.
 - **미들웨어**: `/`, `/dashboard` 등은 로그인하지 않으면 `/login`으로 리다이렉트
 - **API**: 파트너·엑셀 내보내기·임포트 등 DB 데이터를 다루는 모든 API는 **인증된 세션**이 있을 때만 응답하며, 미인증 요청은 401을 반환합니다. API 응답에는 캐시 방지·노출 제한 헤더가 적용됩니다.
@@ -56,7 +56,7 @@ railway run npx prisma db seed
 
 - 배포가 끝나면 **Settings** → **Domains** 에서 URL 확인 (예: `https://partner-dashboard-production.up.railway.app`)
 - `NEXTAUTH_URL`을 이 URL과 동일하게 설정했는지 확인
-- 해당 URL로 접속 → 로그인 화면 → 아무 이메일 + `LOGIN_PASSWORD`에 설정한 비밀번호로 로그인
+- 해당 URL로 접속 → 로그인 화면 → `LOGIN_PASSWORD`에 설정한 **비밀번호만** 입력 후 로그인
 
 ### 5단계: 링크 공유
 
@@ -97,9 +97,12 @@ Vercel은 **서버리스**라서 로컬 파일 DB를 쓸 수 없습니다. **Neo
 | `DATABASE_URL` | Neon에서 복사한 **Postgres 연결 URL** (`postgresql://...` 로 시작) |
 | `NEXTAUTH_SECRET` | `openssl rand -base64 32` 로 생성한 값 |
 | `NEXTAUTH_URL` | `https://your-project.vercel.app` (배포 후 실제 URL로 수정) |
-| `LOGIN_PASSWORD` | **접속 비밀번호** (로그인 시 입력하는 값, 프로덕션 필수) |
+| `LOGIN_PASSWORD` | **접속 비밀번호** (로그인 화면에서 입력하는 값. 이 비밀번호를 아는 사람만 대시보드 접근 가능. 프로덕션 필수) |
 
 4. **Deploy** 실행
+
+**비밀번호 설정 요약:**  
+Vercel **Settings → Environment Variables**에서 `LOGIN_PASSWORD`를 추가하고, 사용할 비밀번호 문자열을 넣으면 됩니다. (예: `mypassword123`) 배포 후 접속 시 로그인 화면에 이 비밀번호를 입력한 사람만 대시보드가 보입니다. 값 변경 후에는 **Redeploy** 해야 적용됩니다.
 
 **기존에 `ALLOWED_EDITOR_EMAILS`를 쓰던 경우:**  
 해당 변수는 **삭제**하고, 위 표처럼 **`LOGIN_PASSWORD`** 하나만 추가하면 됩니다. (이메일 제한 없이 비밀번호만 맞으면 접속 가능)
@@ -121,8 +124,28 @@ npx prisma db seed
 ### 3단계: 접속 및 링크 공유
 
 - 배포 URL(예: `https://partner-dashboard.vercel.app`)로 접속
-- 아무 이메일 + `LOGIN_PASSWORD`에 설정한 비밀번호로 로그인
+- 로그인 화면에서 `LOGIN_PASSWORD`에 설정한 **비밀번호** 입력 후 로그인
 - 접속 링크와 비밀번호를 필요한 사람에게만 공유하면 됩니다.
+
+---
+
+### `The table 'public.CompanyAlias' does not exist` (또는 테이블 없음) 오류일 때
+
+**원인**: Neon DB에 테이블이 한 번도 생성되지 않았습니다. `DATABASE_URL`만 넣고 **테이블 생성 단계**를 하지 않으면 발생합니다.
+
+**해결** (로컬에서 한 번만 실행):
+
+1. 로컬 프로젝트 루트에 `.env` 파일을 만들고, **Vercel에 넣은 것과 같은 Neon 연결 URL**을 넣습니다.
+   ```env
+   DATABASE_URL="postgresql://user:password@ep-xxx.region.aws.neon.tech/neondb?sslmode=require"
+   ```
+2. 터미널에서 아래를 순서대로 실행합니다.
+   ```bash
+   npx prisma db push
+   npx prisma db seed
+   ```
+3. `db push`가 성공하면 Neon DB에 모든 테이블(Partner, CompanyAlias, User 등)이 생성됩니다. `db seed`는 회사명 매핑 등 초기 데이터를 넣습니다.
+4. 이후 Vercel 앱에서 엑셀 업로드 등이 정상 동작합니다.
 
 ---
 
