@@ -11,6 +11,9 @@ import { toast } from "sonner";
 const OPTIONAL_LABELS: Record<OptionalColumnId, string> = {
   businessCardDate: "명함 등록일",
   history: "히스토리",
+  inviter: "초청인",
+  giftSender: "선물 발송인",
+  giftItem: "선물 품목",
 };
 
 interface FilterBarProps {
@@ -127,60 +130,75 @@ export function FilterBar({ filters, onFiltersChange, onRefresh, canSaveFilter =
           </Button>
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2 border-t">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-2 border-t">
         <div className="space-y-2">
-          <Label className="text-xs font-medium">DAN초청여부</Label>
-          <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-1.5 cursor-pointer text-sm">
-              <input
-                type="checkbox"
-                checked={filters.dan23}
-                onChange={(e) => onFiltersChange({ ...filters, dan23: e.target.checked })}
-                className="rounded border-input"
-              />
-              DAN23
-            </label>
-            <label className="flex items-center gap-1.5 cursor-pointer text-sm">
-              <input
-                type="checkbox"
-                checked={filters.dan24}
-                onChange={(e) => onFiltersChange({ ...filters, dan24: e.target.checked })}
-                className="rounded border-input"
-              />
-              DAN24
-            </label>
-            <label className="flex items-center gap-1.5 cursor-pointer text-sm">
-              <input
-                type="checkbox"
-                checked={filters.dan25}
-                onChange={(e) => onFiltersChange({ ...filters, dan25: e.target.checked })}
-                className="rounded border-input"
-              />
-              DAN25
-            </label>
+          <Label className="text-xs font-medium">DAN초청여부 (Y/N)</Label>
+          <div className="flex flex-wrap gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground w-12">DAN23</span>
+              <select
+                value={filters.dan23Yn}
+                onChange={(e) => onFiltersChange({ ...filters, dan23Yn: e.target.value as "" | "Y" | "N" })}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
+              >
+                <option value="">전체</option>
+                <option value="Y">Y</option>
+                <option value="N">N</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground w-12">DAN24</span>
+              <select
+                value={filters.dan24Yn}
+                onChange={(e) => onFiltersChange({ ...filters, dan24Yn: e.target.value as "" | "Y" | "N" })}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
+              >
+                <option value="">전체</option>
+                <option value="Y">Y</option>
+                <option value="N">N</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground w-12">DAN25</span>
+              <select
+                value={filters.dan25Yn}
+                onChange={(e) => onFiltersChange({ ...filters, dan25Yn: e.target.value as "" | "Y" | "N" })}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
+              >
+                <option value="">전체</option>
+                <option value="Y">Y</option>
+                <option value="N">N</option>
+              </select>
+            </div>
           </div>
         </div>
         <div className="space-y-2">
-          <Label className="text-xs font-medium">선물발송여부</Label>
-          <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-1.5 cursor-pointer text-sm">
-              <input
-                type="checkbox"
-                checked={filters.gift2024}
-                onChange={(e) => onFiltersChange({ ...filters, gift2024: e.target.checked })}
-                className="rounded border-input"
-              />
-              2024
-            </label>
-            <label className="flex items-center gap-1.5 cursor-pointer text-sm">
-              <input
-                type="checkbox"
-                checked={filters.gift2025}
-                onChange={(e) => onFiltersChange({ ...filters, gift2025: e.target.checked })}
-                className="rounded border-input"
-              />
-              2025
-            </label>
+          <Label className="text-xs font-medium">선물발송여부 (Y/N)</Label>
+          <div className="flex flex-wrap gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground w-10">24년</span>
+              <select
+                value={filters.gift24Yn}
+                onChange={(e) => onFiltersChange({ ...filters, gift24Yn: e.target.value as "" | "Y" | "N" })}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
+              >
+                <option value="">전체</option>
+                <option value="Y">Y</option>
+                <option value="N">N</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground w-10">25년</span>
+              <select
+                value={filters.gift25Yn}
+                onChange={(e) => onFiltersChange({ ...filters, gift25Yn: e.target.value as "" | "Y" | "N" })}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
+              >
+                <option value="">전체</option>
+                <option value="Y">Y</option>
+                <option value="N">N</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>

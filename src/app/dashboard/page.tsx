@@ -21,8 +21,13 @@ function filtersFromSearchParams(sp: URLSearchParams): FilterState {
     dan23: sp.get("dan23") === "true",
     dan24: sp.get("dan24") === "true",
     dan25: sp.get("dan25") === "true",
+    dan23Yn: (sp.get("dan23Yn") === "Y" || sp.get("dan23Yn") === "N" ? sp.get("dan23Yn") : "") as FilterState["dan23Yn"],
+    dan24Yn: (sp.get("dan24Yn") === "Y" || sp.get("dan24Yn") === "N" ? sp.get("dan24Yn") : "") as FilterState["dan24Yn"],
+    dan25Yn: (sp.get("dan25Yn") === "Y" || sp.get("dan25Yn") === "N" ? sp.get("dan25Yn") : "") as FilterState["dan25Yn"],
     gift2024: sp.get("gift2024") === "true",
     gift2025: sp.get("gift2025") === "true",
+    gift24Yn: (sp.get("gift24Yn") === "Y" || sp.get("gift24Yn") === "N" ? sp.get("gift24Yn") : "") as FilterState["gift24Yn"],
+    gift25Yn: (sp.get("gift25Yn") === "Y" || sp.get("gift25Yn") === "N" ? sp.get("gift25Yn") : "") as FilterState["gift25Yn"],
     inviter: sp.get("inviter") ?? "",
     giftSender: sp.get("giftSender") ?? "",
     showColumns: (() => {
@@ -47,8 +52,13 @@ function filtersToSearchParams(f: FilterState): URLSearchParams {
   if (f.dan23) p.set("dan23", "true");
   if (f.dan24) p.set("dan24", "true");
   if (f.dan25) p.set("dan25", "true");
+  if (f.dan23Yn) p.set("dan23Yn", f.dan23Yn);
+  if (f.dan24Yn) p.set("dan24Yn", f.dan24Yn);
+  if (f.dan25Yn) p.set("dan25Yn", f.dan25Yn);
   if (f.gift2024) p.set("gift2024", "true");
   if (f.gift2025) p.set("gift2025", "true");
+  if (f.gift24Yn) p.set("gift24Yn", f.gift24Yn);
+  if (f.gift25Yn) p.set("gift25Yn", f.gift25Yn);
   if (f.inviter) p.set("inviter", f.inviter);
   if (f.giftSender) p.set("giftSender", f.giftSender);
   if (f.showColumns.length) p.set("showColumns", JSON.stringify(f.showColumns));
@@ -122,6 +132,7 @@ function DashboardContent() {
         filters={filters}
         refreshKey={refreshKey}
         onSelectPartner={setSelectedPartnerId}
+        onRefresh={refresh}
         canEdit={!!editor}
       />
       <PartnerDetailSheet

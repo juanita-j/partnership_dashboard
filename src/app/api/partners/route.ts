@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { partnerCreateSchema } from "@/lib/validations";
 import type { Prisma } from "@prisma/client";
@@ -45,10 +43,6 @@ function toEventsByYear(
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10)));
@@ -60,8 +54,13 @@ export async function GET(req: NextRequest) {
     const dan23 = searchParams.get("dan23") === "true";
     const dan24 = searchParams.get("dan24") === "true";
     const dan25 = searchParams.get("dan25") === "true";
+    const dan23Yn = searchParams.get("dan23Yn") ?? "";
+    const dan24Yn = searchParams.get("dan24Yn") ?? "";
+    const dan25Yn = searchParams.get("dan25Yn") ?? "";
     const gift2024 = searchParams.get("gift2024") === "true";
     const gift2025 = searchParams.get("gift2025") === "true";
+    const gift24Yn = searchParams.get("gift24Yn") ?? "";
+    const gift25Yn = searchParams.get("gift25Yn") ?? "";
     const inviter = (searchParams.get("inviter") ?? "").trim();
     const giftSender = (searchParams.get("giftSender") ?? "").trim();
 
@@ -84,21 +83,21 @@ export async function GET(req: NextRequest) {
     }
 
     const eventConditions: Record<string, unknown>[] = [];
-    if (dan23) {
-      eventConditions.push({ year: 2023, danInvitedRaw: "Y" });
-    }
-    if (dan24) {
-      eventConditions.push({ year: 2024, danInvitedRaw: "Y" });
-    }
-    if (dan25) {
-      eventConditions.push({ year: 2025, danInvitedRaw: "Y" });
-    }
-    if (gift2024) {
-      eventConditions.push({ year: 2024, giftRecipient: "Y" });
-    }
-    if (gift2025) {
-      eventConditions.push({ year: 2025, giftRecipient: "Y" });
-    }
+    if (dan23) eventConditions.push({ year: 2023, danInvitedRaw: "Y" });
+    if (dan24) eventConditions.push({ year: 2024, danInvitedRaw: "Y" });
+    if (dan25) eventConditions.push({ year: 2025, danInvitedRaw: "Y" });
+    if (dan23Yn === "Y") eventConditions.push({ year: 2023, danInvitedRaw: "Y" });
+    if (dan23Yn === "N") eventConditions.push({ year: 2023, danInvitedRaw: "N" });
+    if (dan24Yn === "Y") eventConditions.push({ year: 2024, danInvitedRaw: "Y" });
+    if (dan24Yn === "N") eventConditions.push({ year: 2024, danInvitedRaw: "N" });
+    if (dan25Yn === "Y") eventConditions.push({ year: 2025, danInvitedRaw: "Y" });
+    if (dan25Yn === "N") eventConditions.push({ year: 2025, danInvitedRaw: "N" });
+    if (gift2024) eventConditions.push({ year: 2024, giftRecipient: "Y" });
+    if (gift2025) eventConditions.push({ year: 2025, giftRecipient: "Y" });
+    if (gift24Yn === "Y") eventConditions.push({ year: 2024, giftRecipient: "Y" });
+    if (gift24Yn === "N") eventConditions.push({ year: 2024, giftRecipient: "N" });
+    if (gift25Yn === "Y") eventConditions.push({ year: 2025, giftRecipient: "Y" });
+    if (gift25Yn === "N") eventConditions.push({ year: 2025, giftRecipient: "N" });
     if (inviter) {
       eventConditions.push({ danInviter: { contains: inviter } });
     }
@@ -143,10 +142,6 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const body = await req.json();
     const parsed = partnerCreateSchema.safeParse(body);
     if (!parsed.success) {

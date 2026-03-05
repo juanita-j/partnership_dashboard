@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { MergeDiffItem } from "@/lib/excel-import";
 
 /** Merge: 비어있지 않은 컬럼만 업데이트. history에 변경 로그 append */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const body = await req.json();
     const diff = body.diff as MergeDiffItem[] | undefined;
     if (!Array.isArray(diff)) {
@@ -85,8 +79,9 @@ export async function POST(req: NextRequest) {
           historyParts.push("휴대폰 변경");
         }
         if (p.companyNormalized != null && (p.companyNormalized ?? "").trim() !== "" && (p.companyNormalized ?? "").trim() !== (existing.companyNormalized ?? "").trim()) {
+          const oldCompany = (existing.companyNormalized ?? "").trim();
           updates.companyNormalized = p.companyNormalized?.trim() ?? "";
-          historyParts.push(`회사 ${existing.companyNormalized} -> ${p.companyNormalized}`);
+          if (oldCompany) historyParts.push(`ex-${oldCompany}`);
         }
         if (p.department !== undefined && (p.department ?? "").trim() !== (existing.department ?? "").trim()) {
           updates.department = (p.department ?? "").trim() || null;

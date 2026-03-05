@@ -27,6 +27,7 @@ export default function CompanyAliasPage() {
   const [list, setList] = useState<AliasRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ normalizedName: "", alias: "", locale: "" });
   const [saving, setSaving] = useState(false);
   const editor = true;
@@ -45,22 +46,58 @@ export default function CompanyAliasPage() {
 
   const handleAdd = () => {
     if (!editor) return;
+    setEditingId(null);
     setForm({ normalizedName: "", alias: "", locale: "ko" });
+    setDialogOpen(true);
+  };
+
+  const handleEdit = (row: AliasRow) => {
+    if (!editor) return;
+    setEditingId(row.id);
+    setForm({ normalizedName: row.normalizedName, alias: row.alias, locale: row.locale || "" });
     setDialogOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editor || !form.normalizedName.trim() || !form.alias.trim()) return;
+    if (!editor || !form.normalizedName.trim()) return;
+    const aliases = form.alias.split(",").map((a) => a.trim()).filter(Boolean);
+    if (editingId) {
+      if (!aliases.length) return;
+      setSaving(true);
+      try {
+        const res = await fetch(`/api/company-alias/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ normalizedName: form.normalizedName.trim(), alias: aliases[0], locale: form.locale.trim() || "" }),
+        });
+        if (!res.ok) throw new Error("수정 실패");
+        toast.success("수정되었습니다.");
+        setDialogOpen(false);
+        load();
+      } catch {
+        toast.error("수정에 실패했습니다.");
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+    if (!aliases.length) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/company-alias", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error("저장 실패");
-      toast.success("추가되었습니다.");
+      for (const alias of aliases) {
+        const res = await fetch("/api/company-alias", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            normalizedName: form.normalizedName.trim(),
+            alias,
+            locale: form.locale.trim() || "",
+          }),
+        });
+        if (!res.ok) throw new Error("저장 실패");
+      }
+      toast.success(`${aliases.length}개 매핑이 추가되었습니다.`);
       setDialogOpen(false);
       load();
     } catch {
@@ -117,14 +154,19 @@ export default function CompanyAliasPage() {
                   <TableCell>{row.locale || "-"}</TableCell>
                   {editor && (
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive"
-                        onClick={() => handleDelete(row.id)}
-                      >
-                        삭제
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(row)}>
+                          수정
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => handleDelete(row.id)}
+                        >
+                          삭제
+                        </Button>
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
@@ -136,7 +178,7 @@ export default function CompanyAliasPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>매핑 추가</DialogTitle>
+            <DialogTitle>{editingId ? "매핑 수정" : "매핑 추가"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -154,10 +196,13 @@ export default function CompanyAliasPage() {
               <Input
                 value={form.alias}
                 onChange={(e) => setForm({ ...form, alias: e.target.value })}
-                placeholder="예: hyundai motors"
-                required
+                placeholder="여러 개일 경우 쉼표(,)로 구분. 예: hyundai motors, 현대자동차"
+                required={!editingId}
                 className="mt-1"
               />
+              {!editingId && (
+                <p className="text-xs text-muted-foreground mt-1">하나의 표준명에 여러 별칭을 등록할 수 있습니다.</p>
+              )}
             </div>
             <div>
               <Label>locale (선택)</Label>

@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseSheet, normalizeParsedRows, type ParsedRow, type MergeDiff } from "@/lib/excel-import";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     if (!file) {
@@ -47,25 +41,13 @@ async function buildMergeDiff(rows: ParsedRow[]): Promise<MergeDiff> {
     if (!name && !email && !company) continue;
     let existing = null;
     let matchKey = "";
-    if (email) {
-      existing = partners.find((p) => p.email?.toLowerCase() === email.toLowerCase());
-      matchKey = `email:${email}`;
-    }
-    if (!existing && name && phone) {
+    if (name && phone) {
       existing = partners.find(
         (p) =>
           p.name.trim() === name &&
           (p.phone ?? "").trim() === phone
       );
       matchKey = `name+phone:${name}|${phone}`;
-    }
-    if (!existing && name && company) {
-      existing = partners.find(
-        (p) =>
-          p.name.trim() === name &&
-          (p.companyNormalized ?? "").trim() === company
-      );
-      matchKey = `name+company:${name}|${company}`;
     }
     const changes: string[] = [];
     if (existing) {

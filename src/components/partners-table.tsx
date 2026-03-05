@@ -50,6 +50,7 @@ interface PartnersTableProps {
   filters: FilterState;
   refreshKey: number;
   onSelectPartner: (id: string | null) => void;
+  onRefresh?: () => void;
   canEdit: boolean;
 }
 
@@ -63,8 +64,13 @@ function buildQuery(f: FilterState, page: number): string {
   if (f.dan23) p.set("dan23", "true");
   if (f.dan24) p.set("dan24", "true");
   if (f.dan25) p.set("dan25", "true");
+  if (f.dan23Yn) p.set("dan23Yn", f.dan23Yn);
+  if (f.dan24Yn) p.set("dan24Yn", f.dan24Yn);
+  if (f.dan25Yn) p.set("dan25Yn", f.dan25Yn);
   if (f.gift2024) p.set("gift2024", "true");
   if (f.gift2025) p.set("gift2025", "true");
+  if (f.gift24Yn) p.set("gift24Yn", f.gift24Yn);
+  if (f.gift25Yn) p.set("gift25Yn", f.gift25Yn);
   if (f.inviter) p.set("inviter", f.inviter);
   if (f.giftSender) p.set("giftSender", f.giftSender);
   p.set("page", String(page));
@@ -86,7 +92,14 @@ const FIXED_HEADERS: { id: (typeof FIXED_COLUMN_IDS)[number]; label: string }[] 
 const OPTIONAL_HEADERS: { id: OptionalColumnId; label: string }[] = [
   { id: "businessCardDate", label: "명함 등록일" },
   { id: "history", label: "히스토리" },
+  { id: "inviter", label: "초청인" },
+  { id: "giftSender", label: "선물 발송인" },
+  { id: "giftItem", label: "선물 품목" },
 ];
+
+const INVITER_COL_IDS = ["dan23Inviter", "dan24Inviter", "dan25Inviter"] as const;
+const GIFT_SENDER_COL_IDS = ["gift24Sender", "gift25Sender"] as const;
+const GIFT_ITEM_COL_IDS = ["gift24Item", "gift25Item"] as const;
 
 const DAN_HEADERS: { id: (typeof DAN_AUTO_COLUMNS)[number]; label: string }[] = [
   { id: "dan23Invited", label: "DAN23 초청여부" },
@@ -199,7 +212,7 @@ function getCellValue(p: PartnerRow, colId: string): string {
   }
 }
 
-export function PartnersTable({ filters, refreshKey, onSelectPartner, canEdit }: PartnersTableProps) {
+export function PartnersTable({ filters, refreshKey, onSelectPartner, onRefresh, canEdit }: PartnersTableProps) {
   const [data, setData] = useState<PartnerRow[]>([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 });
   const [loading, setLoading] = useState(true);
@@ -227,13 +240,20 @@ export function PartnersTable({ filters, refreshKey, onSelectPartner, canEdit }:
   }, [filters, refreshKey, currentPage]);
 
   const showOptional = OPTIONAL_HEADERS.filter((h) => filters.showColumns.includes(h.id));
-  const showDan = (filters.dan23 || filters.dan24 || filters.dan25) ? DAN_HEADERS : [];
-  const giftFilterOn = filters.gift2024 || filters.gift2025 || (filters.giftSender ?? "").trim() !== "";
+  const expandedOptional = showOptional.flatMap((h) => {
+    if (h.id === "inviter") return INVITER_COL_IDS.map((colId) => ({ id: colId, label: DAN_HEADERS.find((d) => d.id === colId)!.label }));
+    if (h.id === "giftSender") return GIFT_SENDER_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS.find((g) => g.id === colId)!.label }));
+    if (h.id === "giftItem") return GIFT_ITEM_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS.find((g) => g.id === colId)!.label }));
+    return [{ id: h.id, label: h.label }];
+  });
+  const danFilterOn = filters.dan23 || filters.dan24 || filters.dan25 || filters.dan23Yn || filters.dan24Yn || filters.dan25Yn;
+  const showDan = danFilterOn ? DAN_HEADERS : [];
+  const giftFilterOn = filters.gift2024 || filters.gift2025 || filters.gift24Yn || filters.gift25Yn || (filters.giftSender ?? "").trim() !== "";
   const showGift = giftFilterOn
     ? GIFT_HEADERS.filter(
         (h) =>
-          (h.id.startsWith("gift24") && (filters.gift2024 || (filters.giftSender ?? "").trim() !== "")) ||
-          (h.id.startsWith("gift25") && (filters.gift2025 || (filters.giftSender ?? "").trim() !== ""))
+          (h.id.startsWith("gift24") && (filters.gift2024 || filters.gift24Yn || (filters.giftSender ?? "").trim() !== "")) ||
+          (h.id.startsWith("gift25") && (filters.gift2025 || filters.gift25Yn || (filters.giftSender ?? "").trim() !== ""))
       )
     : [];
 
@@ -307,6 +327,20 @@ export function PartnersTable({ filters, refreshKey, onSelectPartner, canEdit }:
   const cancelHistoryEdit = () => {
     setEditingHistoryId(null);
     setEditingHistoryValue("");
+  };
+
+  const handleDeletePartner = async (partnerId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!canEdit || !confirm("이 파트너를 삭제할까요?")) return;
+    try {
+      const res = await fetch(`/api/partners/${partnerId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("삭제 실패");
+      setData((list) => list.filter((p) => p.id !== partnerId));
+      onRefresh?.();
+      toast.success("삭제되었습니다.");
+    } catch {
+      toast.error("삭제에 실패했습니다.");
+    }
   };
 
   const handlePartnerFieldChange = async (partnerId: string, field: string, value: string) => {
@@ -535,9 +569,9 @@ export function PartnersTable({ filters, refreshKey, onSelectPartner, canEdit }:
                 {h.label}
               </TableHead>
             ))}
-            {showOptional.map((h) => (
-              <TableHead key={h.id} className="whitespace-nowrap">
-                {h.label}
+            {expandedOptional.map((item) => (
+              <TableHead key={item.id} className="whitespace-nowrap">
+                {item.label}
               </TableHead>
             ))}
             {showDan.map((h) => (
@@ -564,12 +598,28 @@ export function PartnersTable({ filters, refreshKey, onSelectPartner, canEdit }:
             >
               {FIXED_HEADERS.map((h) => (
                 <TableCell key={h.id} onClick={(e) => canEdit && e.stopPropagation()}>
-                  {canEdit ? renderEditableCell(p, h.id) : (getCellValue(p, h.id) || "-")}
+                  {h.id === "name" ? (
+                    <div className="group flex items-center gap-1 min-h-[32px]">
+                      <span className="flex-1 min-w-0">{canEdit ? renderEditableCell(p, h.id) : (getCellValue(p, h.id) || "-")}</span>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeletePartner(p.id, e)}
+                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive text-xs w-5 h-5 flex items-center justify-center rounded border border-transparent hover:border-input transition-opacity"
+                          title="삭제"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    canEdit ? renderEditableCell(p, h.id) : (getCellValue(p, h.id) || "-")
+                  )}
                 </TableCell>
               ))}
-              {showOptional.map((h) => (
-                <TableCell key={h.id} onClick={(e) => (h.id === "history" || (canEdit && h.id === "businessCardDate")) && e.stopPropagation()}>
-                  {h.id === "history" && canEdit && editingHistoryId === p.id ? (
+              {expandedOptional.map((item) => (
+                <TableCell key={item.id} onClick={(e) => (item.id === "history" || (canEdit && (item.id === "businessCardDate" || DAN_HEADERS.some((d) => d.id === item.id) || GIFT_HEADERS.some((g) => g.id === item.id)))) && e.stopPropagation()}>
+                  {item.id === "history" && canEdit && editingHistoryId === p.id ? (
                     <div className="flex gap-1 items-start min-w-[200px]" onClick={(e) => e.stopPropagation()}>
                       <textarea
                         className="flex min-h-[60px] w-full min-w-[200px] rounded-md border border-input bg-background px-2 py-1.5 text-sm resize-y"
@@ -589,19 +639,19 @@ export function PartnersTable({ filters, refreshKey, onSelectPartner, canEdit }:
                         </Button>
                       </div>
                     </div>
-                  ) : h.id === "history" && canEdit ? (
+                  ) : item.id === "history" && canEdit ? (
                     <div
                       className="min-h-[32px] min-w-[120px] px-2 py-1 rounded border border-transparent hover:border-input cursor-text"
                       onClick={() => startEditHistory(p)}
                     >
-                      {getCellValue(p, h.id)}
+                      {getCellValue(p, item.id)}
                     </div>
-                  ) : h.id === "history" ? (
-                    getCellValue(p, h.id)
-                  ) : canEdit && h.id === "businessCardDate" ? (
-                    renderEditableCell(p, h.id)
+                  ) : item.id === "history" ? (
+                    getCellValue(p, item.id)
+                  ) : canEdit && (item.id === "businessCardDate" || INVITER_COL_IDS.includes(item.id as typeof INVITER_COL_IDS[number]) || GIFT_SENDER_COL_IDS.includes(item.id as typeof GIFT_SENDER_COL_IDS[number]) || GIFT_ITEM_COL_IDS.includes(item.id as typeof GIFT_ITEM_COL_IDS[number])) ? (
+                    renderEditableCell(p, item.id)
                   ) : (
-                    (getCellValue(p, h.id) || "-")
+                    (getCellValue(p, item.id) || "-")
                   )}
                 </TableCell>
               ))}
