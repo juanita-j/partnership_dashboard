@@ -2,10 +2,12 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 
-const ALLOWED_EMAILS = (process.env.ALLOWED_EDITOR_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
+function getAllowedEmails(): string[] {
+  return (process.env.ALLOWED_EDITOR_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
 
 export const authOptions: NextAuthOptions = {
   adapter: undefined,
@@ -21,12 +23,13 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email) return null;
         const email = credentials.email.trim().toLowerCase();
+        const allowedEmails = getAllowedEmails();
         // 프로덕션에서는 허용 이메일 목록이 반드시 있어야 함(미설정 시 누구나 로그인 가능 방지)
         const isProduction = process.env.NODE_ENV === "production";
-        if (isProduction && !ALLOWED_EMAILS.length) {
+        if (isProduction && !allowedEmails.length) {
           return null;
         }
-        if (ALLOWED_EMAILS.length && !ALLOWED_EMAILS.includes(email)) {
+        if (allowedEmails.length && !allowedEmails.includes(email)) {
           return null;
         }
         let user = await prisma.user.findUnique({ where: { email } });
