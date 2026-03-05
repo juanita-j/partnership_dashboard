@@ -1,0 +1,153 @@
+"use client";
+
+import { useState, useRef } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+
+type MergeDiffItem = {
+  action: "create" | "update";
+  partnerId?: string;
+  matchKey: string;
+  changes?: string[];
+  partner?: { name?: string; companyNormalized?: string; email?: string };
+};
+
+interface ExcelUploadDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onApplied: () => void;
+}
+
+export function ExcelUploadDialog({ open, onClose, onApplied }: ExcelUploadDialogProps) {
+  const [file, setFile] = useState<File | null>(null);
+  const [diff, setDiff] = useState<MergeDiffItem[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    setFile(f ?? null);
+    setDiff(null);
+  };
+
+  const handlePreview = async () => {
+    if (!file) {
+      toast.error("파일을 선택하세요.");
+      return;
+    }
+    setLoading(true);
+    setDiff(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/import/excel", {
+        method: "POST",
+        body: form,
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        const msg = errBody?.message || errBody?.error || "업로드 실패";
+        throw new Error(typeof msg === "string" ? msg : "엑셀 파싱에 실패했습니다.");
+      }
+      const data = await res.json();
+      setDiff(data.diff ?? []);
+      toast.success(`총 ${data.totalRows ?? 0}행 분석됨. 변경사항을 확인한 뒤 적용하세요.`);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "엑셀 파싱에 실패했습니다.";
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApply = async () => {
+    if (!diff?.length) {
+      toast.error("먼저 엑셀을 업로드하고 미리보기를 실행하세요.");
+      return;
+    }
+    setApplying(true);
+    try {
+      const res = await fetch("/api/import/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ diff }),
+      });
+      if (!res.ok) throw new Error("적용 실패");
+      const data = await res.json();
+      toast.success(`적용 완료: 신규 ${data.created ?? 0}건, 수정 ${data.updated ?? 0}건`);
+      setDiff(null);
+      setFile(null);
+      if (inputRef.current) inputRef.current.value = "";
+      onApplied();
+      onClose();
+    } catch {
+      toast.error("적용에 실패했습니다.");
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>엑셀 업로드 (미리보기 후 적용)</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="flex gap-2 items-center">
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleFileChange}
+              className="text-sm"
+            />
+            <Button size="sm" onClick={handlePreview} disabled={!file || loading}>
+              {loading ? "분석 중..." : "미리보기"}
+            </Button>
+          </div>
+          {diff && (
+            <>
+              <div className="rounded border p-3 max-h-60 overflow-y-auto space-y-2">
+                <p className="text-sm font-medium">변경 예정: {diff.length}건</p>
+                {diff.slice(0, 20).map((item, i) => (
+                  <div key={i} className="text-sm border-b pb-1">
+                    <span className="font-medium">
+                      {item.action === "create" ? "신규" : "수정"}: {(item.partner?.name && item.partner.name !== "(이름없음)") ? item.partner.name : item.matchKey}
+                    </span>
+                    {item.changes?.length ? (
+                      <ul className="list-disc list-inside text-muted-foreground">
+                        {item.changes.map((c, j) => (
+                          <li key={j}>{c}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ))}
+                {diff.length > 20 && (
+                  <p className="text-muted-foreground text-xs">... 외 {diff.length - 20}건</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleApply} disabled={applying}>
+                  {applying ? "적용 중..." : "적용"}
+                </Button>
+                <DialogClose className="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input bg-background hover:bg-accent h-10 px-4 py-2">
+                  취소
+                </DialogClose>
+              </div>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

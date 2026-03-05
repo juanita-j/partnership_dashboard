@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("viewer")
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Partner {
+  id                     String        @id @default(cuid())
+  status                 String        @default("active")
+  name                   String
+  phone                  String?       @default("")
+  companyNormalized      String        @default("")
+  department             String?       @default("")
+  title                  String?       @default("")
+  email                  String?       @default("")
+  workPhone              String?       @default("")
+  workFax                String?       @default("")
+  address                String?       @default("")
+  businessCardDate       DateTime?
+  businessCardDateRaw    String?
+  employmentStatus       String        @default("재직")
+  employmentUpdatedAt    DateTime?
+  employmentUpdatedAtRaw String?
+  history                String?       @default("")
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  yearlyEvents           YearlyEvent[]
+
+  @@index([email])
+  @@index([companyNormalized])
+  @@index([status, employmentStatus])
+}
+
+model YearlyEvent {
+  id              String   @id @default(cuid())
+  partnerId       String
+  year            Int
+  danInvitedRaw   String?
+  danInviter      String?  @default("")
+  giftRecipient   String?  @default("")
+  giftSentRaw     String?
+  giftItem        String?  @default("")
+  giftQtyRaw      String?
+  giftSender      String?  @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, year])
+  @@index([year])
+  @@index([giftItem])
+}
+
+model CompanyAlias {
+  id              String   @id @default(cuid())
+  normalizedName  String
+  alias           String
+  locale          String?  @default("")
+  createdAt       DateTime @default(now())
+
+  @@unique([normalizedName, alias])
+  @@index([alias])
+}
+
+model SavedFilter {
+  id          String   @id @default(cuid())
+  name        String
+  filtersJson String
+  createdAt   DateTime @default(now())
+}
