@@ -2,13 +2,6 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 
-function getAllowedEmails(): string[] {
-  return (process.env.ALLOWED_EDITOR_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-}
-
 export const authOptions: NextAuthOptions = {
   adapter: undefined,
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
@@ -21,17 +14,17 @@ export const authOptions: NextAuthOptions = {
         password: { label: "비밀번호", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email) return null;
-        const email = credentials.email.trim().toLowerCase();
-        const allowedEmails = getAllowedEmails();
-        // 프로덕션에서는 허용 이메일 목록이 반드시 있어야 함(미설정 시 누구나 로그인 가능 방지)
+        const password = credentials?.password ?? "";
+        const loginPassword = process.env.LOGIN_PASSWORD ?? "";
         const isProduction = process.env.NODE_ENV === "production";
-        if (isProduction && !allowedEmails.length) {
+        // 프로덕션에서는 LOGIN_PASSWORD 필수(미설정 시 로그인 불가)
+        if (isProduction && !loginPassword) {
           return null;
         }
-        if (allowedEmails.length && !allowedEmails.includes(email)) {
+        if (loginPassword && password !== loginPassword) {
           return null;
         }
+        const email = (credentials?.email ?? "user@shared").trim().toLowerCase() || "user@shared";
         let user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
           user = await prisma.user.create({

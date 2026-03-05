@@ -27,7 +27,7 @@ function LoginForm() {
         redirect: false,
       });
       if (res?.error) {
-        setError("로그인할 수 없습니다. 허용된 이메일인지 확인하세요.");
+        setError("로그인할 수 없습니다. 비밀번호를 확인하세요.");
         return;
       }
       window.location.href = callbackUrl;
@@ -51,8 +51,7 @@ function LoginForm() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="editor@example.com"
-                required
+                placeholder="(아무 이메일이나 입력 가능)"
                 className="mt-1"
               />
             </div>
@@ -63,7 +62,8 @@ function LoginForm() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="(허용 목록에 있으면 아무 값이나)"
+                placeholder="접속 비밀번호"
+                required
                 className="mt-1"
               />
             </div>
@@ -75,7 +75,7 @@ function LoginForm() {
             </Button>
           </form>
           <p className="mt-4 text-xs text-muted-foreground">
-            .env의 ALLOWED_EDITOR_EMAILS에 등록된 이메일만 로그인할 수 있습니다.
+            이메일은 구분용이며, 비밀번호만 맞으면 접속 가능합니다.
           </p>
         </CardContent>
       </Card>
