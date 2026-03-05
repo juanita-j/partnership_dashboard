@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function LoginForm() {
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,7 +21,6 @@ function LoginForm() {
     setLoading(true);
     try {
       const res = await signIn("credentials", {
-        email,
         password,
         redirect: false,
       });
@@ -45,17 +43,6 @@ function LoginForm() {
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="email">이메일</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="(아무 이메일이나 입력 가능)"
-                className="mt-1"
-              />
-            </div>
-            <div>
               <Label htmlFor="password">비밀번호</Label>
               <Input
                 id="password"
@@ -75,7 +62,7 @@ function LoginForm() {
             </Button>
           </form>
           <p className="mt-4 text-xs text-muted-foreground">
-            이메일은 구분용이며, 비밀번호만 맞으면 접속 가능합니다.
+            접속 비밀번호를 입력하세요.
           </p>
         </CardContent>
       </Card>
