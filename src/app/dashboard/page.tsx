@@ -11,12 +11,8 @@ import { Upload, Plus, Download } from "lucide-react";
 import type { FilterState, FilterYn } from "./types";
 import { defaultFilters } from "./types";
 
-const YEAR_RANGE = { min: 2023, max: 2030 };
-function eventYearsFromRange(): number[] {
-  const y: number[] = [];
-  for (let i = YEAR_RANGE.min; i <= YEAR_RANGE.max; i++) y.push(i);
-  return y;
-}
+/** 기본 표시 연도. 2026년 등은 엑셀 업로드로 DB에 연도가 생긴 뒤 /api/event-years에 포함되면 그때부터 표시됨 */
+const DEFAULT_EVENT_YEARS = [2023, 2024, 2025];
 
 function filtersFromSearchParams(sp: URLSearchParams, eventYears: number[]): FilterState {
   const base: FilterState = {
@@ -71,7 +67,7 @@ function filtersToSearchParams(f: FilterState, eventYears: number[]): URLSearchP
 
 function DashboardContent() {
   const searchParams = useSearchParams();
-  const [eventYears, setEventYears] = useState<number[]>(eventYearsFromRange());
+  const [eventYears, setEventYears] = useState<number[]>(DEFAULT_EVENT_YEARS);
   const [filters, setFiltersState] = useState<FilterState>(defaultFilters);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const [excelOpen, setExcelOpen] = useState(false);
@@ -82,10 +78,9 @@ function DashboardContent() {
     fetch("/api/event-years")
       .then((r) => r.json())
       .then((data: { years?: number[] }) => {
-        if (Array.isArray(data.years) && data.years.length > 0) {
-          const sorted = [...data.years].sort((a, b) => a - b);
-          setEventYears(sorted);
-        }
+        if (!Array.isArray(data.years) || data.years.length === 0) return;
+        const sorted = [...data.years].sort((a, b) => a - b);
+        setEventYears(sorted);
       })
       .catch(() => {});
   }, []);
