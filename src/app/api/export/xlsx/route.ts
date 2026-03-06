@@ -179,26 +179,31 @@ export async function GET(req: NextRequest) {
     } catch {
       // ignore
     }
+    const idsParam = (searchParams.get("ids") ?? "").trim();
+    const filterIds = idsParam ? idsParam.split(",").map((id) => id.trim()).filter(Boolean) : null;
 
     const where: Record<string, unknown> = {};
-    if (employmentStatus) where.employmentStatus = employmentStatus;
-    if (name) where.name = { contains: name };
-    if (company) where.companyNormalized = { contains: company };
-    if (department) where.department = { contains: department };
-    if (title) where.title = { contains: title };
-
-    const eventConditions: Record<string, unknown>[] = [];
-    if (dan23) eventConditions.push({ year: 2023, danInvitedRaw: "Y" });
-    if (dan24) eventConditions.push({ year: 2024, danInvitedRaw: "Y" });
-    if (dan25) eventConditions.push({ year: 2025, danInvitedRaw: "Y" });
-    if (gift2024) eventConditions.push({ year: 2024, giftRecipient: "Y" });
-    if (gift2025) eventConditions.push({ year: 2025, giftRecipient: "Y" });
-    if (inviter) eventConditions.push({ danInviter: { contains: inviter } });
-    if (giftSender) eventConditions.push({ giftSender: { contains: giftSender } });
-    if (eventConditions.length > 0) {
-      where.AND = (where.AND as Record<string, unknown>[]) ?? [];
-      for (const cond of eventConditions) {
-        (where.AND as Record<string, unknown>[]).push({ yearlyEvents: { some: cond } });
+    if (filterIds && filterIds.length > 0) {
+      where.id = { in: filterIds };
+    } else {
+      if (employmentStatus) where.employmentStatus = employmentStatus;
+      if (name) where.name = { contains: name };
+      if (company) where.companyNormalized = { contains: company };
+      if (department) where.department = { contains: department };
+      if (title) where.title = { contains: title };
+      const eventConditions: Record<string, unknown>[] = [];
+      if (dan23) eventConditions.push({ year: 2023, danInvitedRaw: "Y" });
+      if (dan24) eventConditions.push({ year: 2024, danInvitedRaw: "Y" });
+      if (dan25) eventConditions.push({ year: 2025, danInvitedRaw: "Y" });
+      if (gift2024) eventConditions.push({ year: 2024, giftRecipient: "Y" });
+      if (gift2025) eventConditions.push({ year: 2025, giftRecipient: "Y" });
+      if (inviter) eventConditions.push({ danInviter: { contains: inviter } });
+      if (giftSender) eventConditions.push({ giftSender: { contains: giftSender } });
+      if (eventConditions.length > 0) {
+        where.AND = (where.AND as Record<string, unknown>[]) ?? [];
+        for (const cond of eventConditions) {
+          (where.AND as Record<string, unknown>[]).push({ yearlyEvents: { some: cond } });
+        }
       }
     }
 

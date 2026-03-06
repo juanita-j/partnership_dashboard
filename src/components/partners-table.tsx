@@ -219,7 +219,7 @@ export function PartnersTable({ filters, refreshKey, onSelectPartner, onRefresh,
   const [editingHistoryId, setEditingHistoryId] = useState<string | null>(null);
   const [editingHistoryValue, setEditingHistoryValue] = useState("");
   const [editingCell, setEditingCell] = useState<{ partnerId: string; colId: string } | null>(null);
-
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -329,15 +329,37 @@ export function PartnersTable({ filters, refreshKey, onSelectPartner, onRefresh,
     setEditingHistoryValue("");
   };
 
-  const handleDeletePartner = async (partnerId: string, e: React.MouseEvent) => {
+  const toggleSelect = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!canEdit || !confirm("이 파트너를 삭제할까요?")) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (selectedIds.size >= data.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(data.map((p) => p.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!canEdit || selectedIds.size === 0 || !confirm(`선택한 ${selectedIds.size}명을 삭제할까요?`)) return;
+    const ids = Array.from(selectedIds);
     try {
-      const res = await fetch(`/api/partners/${partnerId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("삭제 실패");
-      setData((list) => list.filter((p) => p.id !== partnerId));
+      for (const id of ids) {
+        const res = await fetch(`/api/partners/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("삭제 실패");
+      }
+      setData((list) => list.filter((p) => !selectedIds.has(p.id)));
+      setSelectedIds(new Set());
       onRefresh?.();
-      toast.success("삭제되었습니다.");
+      toast.success(`${ids.length}명 삭제되었습니다.`);
     } catch {
       toast.error("삭제에 실패했습니다.");
     }
@@ -555,15 +577,53 @@ export function PartnersTable({ filters, refreshKey, onSelectPartner, onRefresh,
 
   if (loading) return <div className="py-8 text-center text-muted-foreground">로딩 중...</div>;
 
+  const selectedExportUrl =
+    selectedIds.size > 0 && typeof window !== "undefined"
+      ? `/api/export/xlsx?ids=${encodeURIComponent(Array.from(selectedIds).join(","))}&columns=${encodeURIComponent(JSON.stringify(filters.showColumns))}`
+      : null;
+
   return (
     <div className="space-y-2">
-      <p className="text-sm text-muted-foreground">
-        결과: 총 <span className="font-medium text-foreground">{pagination.total}</span>건
-      </p>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-sm text-muted-foreground">
+          결과: 총 <span className="font-medium text-foreground">{pagination.total}</span>건
+          {selectedIds.size > 0 && (
+            <span className="ml-2 text-foreground">· 선택 <span className="font-medium">{selectedIds.size}</span>건</span>
+          )}
+        </p>
+        {selectedIds.size > 0 && (
+          <div className="flex gap-2">
+            {selectedExportUrl && (
+              <a href={selectedExportUrl} download target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="sm" type="button">
+                  선택 항목 다운로드
+                </Button>
+              </a>
+            )}
+            {canEdit && (
+              <Button variant="outline" size="sm" className="text-destructive" onClick={handleBulkDelete}>
+                선택 항목 삭제
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
       <div className="rounded-lg border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-10 px-2" onClick={(e) => e.stopPropagation()}>
+              <input
+                type="checkbox"
+                checked={data.length > 0 && selectedIds.size >= data.length}
+                ref={(el) => {
+                  if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < data.length;
+                }}
+                onChange={() => {}}
+                onClick={toggleSelectAll}
+                className="rounded border-input cursor-pointer"
+              />
+            </TableHead>
             {FIXED_HEADERS.map((h) => (
               <TableHead key={h.id} className="whitespace-nowrap">
                 {h.label}
@@ -596,25 +656,18 @@ export function PartnersTable({ filters, refreshKey, onSelectPartner, onRefresh,
                 onSelectPartner(p.id);
               }}
             >
+              <TableCell className="w-10 px-2" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(p.id)}
+                  onChange={() => {}}
+                  onClick={(e) => toggleSelect(p.id, e)}
+                  className="rounded border-input cursor-pointer"
+                />
+              </TableCell>
               {FIXED_HEADERS.map((h) => (
                 <TableCell key={h.id} onClick={(e) => canEdit && e.stopPropagation()}>
-                  {h.id === "name" ? (
-                    <div className="group flex items-center gap-1 min-h-[32px]">
-                      <span className="flex-1 min-w-0">{canEdit ? renderEditableCell(p, h.id) : (getCellValue(p, h.id) || "-")}</span>
-                      {canEdit && (
-                        <button
-                          type="button"
-                          onClick={(e) => handleDeletePartner(p.id, e)}
-                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive text-xs w-5 h-5 flex items-center justify-center rounded border border-transparent hover:border-input transition-opacity"
-                          title="삭제"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    canEdit ? renderEditableCell(p, h.id) : (getCellValue(p, h.id) || "-")
-                  )}
+                  {canEdit ? renderEditableCell(p, h.id) : (getCellValue(p, h.id) || "-")}
                 </TableCell>
               ))}
               {expandedOptional.map((item) => (
