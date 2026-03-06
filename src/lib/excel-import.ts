@@ -58,6 +58,11 @@ const HEADER_TO_KEY: Record<string, string> = {
   "25년 선물발송인": "2025_giftSender",
 };
 
+function toYear(nn: string): number {
+  const n = parseInt(nn, 10);
+  return n >= 0 && n < 100 ? 2000 + n : n;
+}
+
 function mapHeader(header: string): string | null {
   let trimmed = String(header ?? "").trim();
   if (trimmed.charCodeAt(0) === 0xfeff) trimmed = trimmed.slice(1).trim();
@@ -67,6 +72,18 @@ function mapHeader(header: string): string | null {
   for (const [h, key] of Object.entries(HEADER_TO_KEY)) {
     if (h.replace(/\s/g, "").toLowerCase() === normalized) return key;
   }
+  const danInvited = trimmed.match(/^DAN\s*(\d+)\s*초청여부$/i);
+  if (danInvited) return `${toYear(danInvited[1])}_danInvitedRaw`;
+  const danInviter = trimmed.match(/^DAN\s*(\d+)\s*초청인$/i);
+  if (danInviter) return `${toYear(danInviter[1])}_danInviter`;
+  const giftRecipient = trimmed.match(/^(\d+)\s*년\s*선물수신인$/);
+  if (giftRecipient) return `${toYear(giftRecipient[1])}_giftRecipient`;
+  const giftItem = trimmed.match(/^(\d+)\s*년\s*선물품목$/);
+  if (giftItem) return `${toYear(giftItem[1])}_giftItem`;
+  const giftQty = trimmed.match(/^(\d+)\s*년\s*선물발송개수$/);
+  if (giftQty) return `${toYear(giftQty[1])}_giftQtyRaw`;
+  const giftSender = trimmed.match(/^(\d+)\s*년\s*선물발송인$/);
+  if (giftSender) return `${toYear(giftSender[1])}_giftSender`;
   return null;
 }
 
@@ -146,8 +163,9 @@ export function parseSheet(buffer: ArrayBuffer): ParsedRow[] {
       if (!key) continue;
       const val = row[c];
       const strVal = toStorage(val) ?? "";
-      if (key.startsWith("2023_") || key.startsWith("2024_") || key.startsWith("2025_")) {
-        const y = parseInt(key.slice(0, 4), 10);
+      const yearPrefix = key.match(/^(\d{4})_/);
+      if (yearPrefix) {
+        const y = parseInt(yearPrefix[1], 10);
         if (!years[y]) years[y] = {};
         const suffix = key.slice(5);
         if (suffix === "danInvitedRaw") years[y].danInvitedRaw = strVal || undefined;

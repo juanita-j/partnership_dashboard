@@ -42,15 +42,17 @@ type PartnerDetail = {
 
 interface PartnerDetailSheetProps {
   partnerId: string | null;
+  eventYears?: number[];
   onClose: () => void;
   onSaved: () => void;
   canEdit: boolean;
 }
 
-const YEARS = [2023, 2024, 2025];
+const DEFAULT_YEARS = [2023, 2024, 2025];
 
 export function PartnerDetailSheet({
   partnerId,
+  eventYears = DEFAULT_YEARS,
   onClose,
   onSaved,
   canEdit,
@@ -82,7 +84,7 @@ export function PartnerDetailSheet({
       });
       setEvents(
         Object.fromEntries(
-          YEARS.map((y) => [
+          eventYears.map((y) => [
             y,
             {
               danInvitedRaw: "",
@@ -116,8 +118,9 @@ export function PartnerDetailSheet({
           employmentUpdatedAtRaw: data.employmentUpdatedAtRaw ?? "",
           history: data.history ?? "",
         });
+        const allYears = [...new Set([...eventYears, ...Object.keys(data.eventsByYear ?? {}).map(Number)])].sort((a, b) => a - b);
         const evMap: Record<number, Record<string, unknown>> = {};
-        YEARS.forEach((y) => {
+        allYears.forEach((y) => {
           const ev = data.eventsByYear?.[y];
           evMap[y] = {
             danInvitedRaw: ev?.danInvitedRaw ?? "",
@@ -132,7 +135,7 @@ export function PartnerDetailSheet({
       })
       .catch(() => setPartner(null))
       .finally(() => setLoading(false));
-  }, [partnerId]);
+  }, [partnerId, eventYears]);
 
   const handleSave = async () => {
     if (!canEdit) return;
@@ -146,7 +149,7 @@ export function PartnerDetailSheet({
         });
         if (!res.ok) throw new Error("생성 실패");
         const created = await res.json();
-        for (const y of YEARS) {
+        for (const y of Object.keys(events).map(Number).sort((a, b) => a - b)) {
           const ev = events[y];
           await fetch(`/api/partners/${created.id}/events`, {
             method: "PUT",
@@ -174,7 +177,7 @@ export function PartnerDetailSheet({
           body: JSON.stringify(form),
         });
         if (!res.ok) throw new Error("수정 실패");
-        for (const y of YEARS) {
+        for (const y of Object.keys(events).map(Number).sort((a, b) => a - b)) {
           const ev = events[y];
           await fetch(`/api/partners/${partner.id}/events`, {
             method: "PUT",
@@ -332,7 +335,10 @@ export function PartnerDetailSheet({
             </div>
             <div>
               <h4 className="font-medium mb-2">연도별 이벤트 (값 그대로 저장)</h4>
-              {YEARS.map((y) => (
+              {Object.keys(events)
+                .map(Number)
+                .sort((a, b) => a - b)
+                .map((y) => (
                 <div key={y} className="border rounded p-3 mb-2 space-y-2">
                   <span className="font-medium">{y}년</span>
                   <div className="grid grid-cols-2 gap-2">

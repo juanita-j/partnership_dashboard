@@ -11,13 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import type { FilterState, OptionalColumnId } from "@/app/dashboard/types";
-import {
-  FIXED_COLUMN_IDS,
-  OPTIONAL_COLUMN_IDS,
-  DAN_AUTO_COLUMNS,
-  GIFT_AUTO_COLUMNS,
-  EMPLOYMENT_STATUS_VALUES,
-} from "@/app/dashboard/types";
+import { FIXED_COLUMN_IDS, OPTIONAL_COLUMN_IDS, EMPLOYMENT_STATUS_VALUES } from "@/app/dashboard/types";
 import { toast } from "sonner";
 
 type PartnerRow = {
@@ -48,29 +42,27 @@ type PartnerRow = {
 
 interface PartnersTableProps {
   filters: FilterState;
+  eventYears: number[];
   refreshKey: number;
   onSelectPartner: (id: string | null) => void;
   onRefresh?: () => void;
   canEdit: boolean;
 }
 
-function buildQuery(f: FilterState, page: number): string {
+function buildQuery(f: FilterState, page: number, eventYears: number[]): string {
   const p = new URLSearchParams();
   if (f.employmentStatus) p.set("employmentStatus", f.employmentStatus);
   if (f.name) p.set("name", f.name);
   if (f.company) p.set("company", f.company);
   if (f.department) p.set("department", f.department);
   if (f.title) p.set("title", f.title);
-  if (f.dan23) p.set("dan23", "true");
-  if (f.dan24) p.set("dan24", "true");
-  if (f.dan25) p.set("dan25", "true");
-  if (f.dan23Yn) p.set("dan23Yn", f.dan23Yn);
-  if (f.dan24Yn) p.set("dan24Yn", f.dan24Yn);
-  if (f.dan25Yn) p.set("dan25Yn", f.dan25Yn);
-  if (f.gift2024) p.set("gift2024", "true");
-  if (f.gift2025) p.set("gift2025", "true");
-  if (f.gift24Yn) p.set("gift24Yn", f.gift24Yn);
-  if (f.gift25Yn) p.set("gift25Yn", f.gift25Yn);
+  for (const year of eventYears) {
+    const yy = year % 100;
+    if (f[`dan${yy}`]) p.set(`dan${yy}`, "true");
+    if (f[`dan${yy}Yn`]) p.set(`dan${yy}Yn`, String(f[`dan${yy}Yn`]));
+    if (f[`gift${year}`]) p.set(`gift${year}`, "true");
+    if (f[`gift${yy}Yn`]) p.set(`gift${yy}Yn`, String(f[`gift${yy}Yn`]));
+  }
   if (f.inviter) p.set("inviter", f.inviter);
   if (f.giftSender) p.set("giftSender", f.giftSender);
   p.set("page", String(page));
@@ -92,34 +84,45 @@ const FIXED_HEADERS: { id: (typeof FIXED_COLUMN_IDS)[number]; label: string }[] 
 const OPTIONAL_HEADERS: { id: OptionalColumnId; label: string }[] = [
   { id: "businessCardDate", label: "명함 등록일" },
   { id: "history", label: "히스토리" },
-  { id: "inviter", label: "초청인" },
-  { id: "giftSender", label: "선물 발송인" },
-  { id: "giftItem", label: "선물 품목" },
+  { id: "danInvited", label: "DAN초청여부" },
+  { id: "inviter", label: "DAN초청인" },
+  { id: "giftRecipient", label: "선물수신여부" },
+  { id: "giftItem", label: "선물품목" },
+  { id: "giftQty", label: "선물발송개수" },
+  { id: "giftSender", label: "선물발송인" },
 ];
 
-const INVITER_COL_IDS = ["dan23Inviter", "dan24Inviter", "dan25Inviter"] as const;
-const GIFT_SENDER_COL_IDS = ["gift24Sender", "gift25Sender"] as const;
-const GIFT_ITEM_COL_IDS = ["gift24Item", "gift25Item"] as const;
-
-const DAN_HEADERS: { id: (typeof DAN_AUTO_COLUMNS)[number]; label: string }[] = [
-  { id: "dan23Invited", label: "DAN23 초청여부" },
-  { id: "dan23Inviter", label: "DAN23 초청인" },
-  { id: "dan24Invited", label: "DAN24 초청여부" },
-  { id: "dan24Inviter", label: "DAN24 초청인" },
-  { id: "dan25Invited", label: "DAN25 초청여부" },
-  { id: "dan25Inviter", label: "DAN25 초청인" },
-];
-
-const GIFT_HEADERS: { id: (typeof GIFT_AUTO_COLUMNS)[number]; label: string }[] = [
-  { id: "gift24Recipient", label: "24년 선물수신인" },
-  { id: "gift24Item", label: "24년 선물품목" },
-  { id: "gift24Qty", label: "24년 선물발송개수" },
-  { id: "gift24Sender", label: "24년 선물발송인" },
-  { id: "gift25Recipient", label: "25년 선물수신인" },
-  { id: "gift25Item", label: "25년 선물품목" },
-  { id: "gift25Qty", label: "25년 선물발송개수" },
-  { id: "gift25Sender", label: "25년 선물발송인" },
-];
+const DAN_INVITED_COL_IDS = ["dan23Invited", "dan24Invited", "dan25Invited"] as const;
+function buildDanHeaders(eventYears: number[]): { id: string; label: string }[] {
+  return eventYears.flatMap((y) => {
+    const yy = y % 100;
+    return [
+      { id: `dan${yy}Invited`, label: `DAN${yy} 초청여부` },
+      { id: `dan${yy}Inviter`, label: `DAN${yy} 초청인` },
+    ];
+  });
+}
+function buildGiftHeaders(eventYears: number[]): { id: string; label: string }[] {
+  return eventYears.flatMap((y) => {
+    const yy = y % 100;
+    return [
+      { id: `gift${yy}Recipient`, label: `${yy}년 선물수신인` },
+      { id: `gift${yy}Item`, label: `${yy}년 선물품목` },
+      { id: `gift${yy}Qty`, label: `${yy}년 선물발송개수` },
+      { id: `gift${yy}Sender`, label: `${yy}년 선물발송인` },
+    ];
+  });
+}
+function buildOptionalColIdArrays(eventYears: number[]) {
+  return {
+    DAN_INVITED_COL_IDS: eventYears.map((y) => `dan${y % 100}Invited`),
+    INVITER_COL_IDS: eventYears.map((y) => `dan${y % 100}Inviter`),
+    GIFT_RECIPIENT_COL_IDS: eventYears.map((y) => `gift${y % 100}Recipient`),
+    GIFT_ITEM_COL_IDS: eventYears.map((y) => `gift${y % 100}Item`),
+    GIFT_QTY_COL_IDS: eventYears.map((y) => `gift${y % 100}Qty`),
+    GIFT_SENDER_COL_IDS: eventYears.map((y) => `gift${y % 100}Sender`),
+  };
+}
 
 const DAN_YN_OPTIONS = ["", "Y", "N"];
 const GIFT_YN_OPTIONS = ["", "Y", "N"];
@@ -139,23 +142,23 @@ function colIdToPartnerField(colId: string): string | null {
 }
 
 function colIdToEventYearAndField(colId: string): { year: number; field: string } | null {
-  if (colId.startsWith("dan23")) return { year: 2023, field: colId === "dan23Invited" ? "danInvitedRaw" : "danInviter" };
-  if (colId.startsWith("dan24")) return { year: 2024, field: colId === "dan24Invited" ? "danInvitedRaw" : "danInviter" };
-  if (colId.startsWith("dan25")) return { year: 2025, field: colId === "dan25Invited" ? "danInvitedRaw" : "danInviter" };
-  if (colId.startsWith("gift24")) {
-    const f = colId.replace("gift24", "").toLowerCase();
-    const field = f === "recipient" ? "giftRecipient" : f === "item" ? "giftItem" : f === "qty" ? "giftQtyRaw" : "giftSender";
-    return { year: 2024, field };
-  }
-  if (colId.startsWith("gift25")) {
-    const f = colId.replace("gift25", "").toLowerCase();
-    const field = f === "recipient" ? "giftRecipient" : f === "item" ? "giftItem" : f === "qty" ? "giftQtyRaw" : "giftSender";
-    return { year: 2025, field };
+  const danInvited = colId.match(/^dan(\d{2})Invited$/);
+  if (danInvited) return { year: 2000 + parseInt(danInvited[1], 10), field: "danInvitedRaw" };
+  const danInviter = colId.match(/^dan(\d{2})Inviter$/);
+  if (danInviter) return { year: 2000 + parseInt(danInviter[1], 10), field: "danInviter" };
+  const gift = colId.match(/^gift(\d{2})(Recipient|Item|Qty|Sender)$/);
+  if (gift) {
+    const year = 2000 + parseInt(gift[1], 10);
+    const f = gift[2];
+    const field = f === "Recipient" ? "giftRecipient" : f === "Item" ? "giftItem" : f === "Qty" ? "giftQtyRaw" : "giftSender";
+    return { year, field };
   }
   return null;
 }
 
 function getCellValue(p: PartnerRow, colId: string): string {
+  const eventInfo = colIdToEventYearAndField(colId);
+  if (eventInfo) return p.eventsByYear?.[eventInfo.year]?.[eventInfo.field as keyof NonNullable<PartnerRow["eventsByYear"][number]>] ?? "";
   switch (colId) {
     case "employmentStatus":
       return p.employmentStatus ?? "";
@@ -179,40 +182,12 @@ function getCellValue(p: PartnerRow, colId: string): string {
       return p.businessCardDateRaw ?? "";
     case "history":
       return p.history ?? "";
-    case "dan23Invited":
-      return p.eventsByYear?.[2023]?.danInvitedRaw ?? "";
-    case "dan23Inviter":
-      return p.eventsByYear?.[2023]?.danInviter ?? "";
-    case "dan24Invited":
-      return p.eventsByYear?.[2024]?.danInvitedRaw ?? "";
-    case "dan24Inviter":
-      return p.eventsByYear?.[2024]?.danInviter ?? "";
-    case "dan25Invited":
-      return p.eventsByYear?.[2025]?.danInvitedRaw ?? "";
-    case "dan25Inviter":
-      return p.eventsByYear?.[2025]?.danInviter ?? "";
-    case "gift24Recipient":
-      return p.eventsByYear?.[2024]?.giftRecipient ?? "";
-    case "gift24Item":
-      return p.eventsByYear?.[2024]?.giftItem ?? "";
-    case "gift24Qty":
-      return p.eventsByYear?.[2024]?.giftQtyRaw ?? "";
-    case "gift24Sender":
-      return p.eventsByYear?.[2024]?.giftSender ?? "";
-    case "gift25Recipient":
-      return p.eventsByYear?.[2025]?.giftRecipient ?? "";
-    case "gift25Item":
-      return p.eventsByYear?.[2025]?.giftItem ?? "";
-    case "gift25Qty":
-      return p.eventsByYear?.[2025]?.giftQtyRaw ?? "";
-    case "gift25Sender":
-      return p.eventsByYear?.[2025]?.giftSender ?? "";
     default:
       return "";
   }
 }
 
-export function PartnersTable({ filters, refreshKey, onSelectPartner, onRefresh, canEdit }: PartnersTableProps) {
+export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner, onRefresh, canEdit }: PartnersTableProps) {
   const [data, setData] = useState<PartnerRow[]>([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 });
   const [loading, setLoading] = useState(true);
@@ -222,13 +197,17 @@ export function PartnersTable({ filters, refreshKey, onSelectPartner, onRefresh,
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
+  const DAN_HEADERS = buildDanHeaders(eventYears);
+  const GIFT_HEADERS = buildGiftHeaders(eventYears);
+  const { DAN_INVITED_COL_IDS, INVITER_COL_IDS, GIFT_RECIPIENT_COL_IDS, GIFT_ITEM_COL_IDS, GIFT_QTY_COL_IDS, GIFT_SENDER_COL_IDS } = buildOptionalColIdArrays(eventYears);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [filters, refreshKey]);
 
   useEffect(() => {
     setLoading(true);
-    const q = buildQuery(filters, currentPage);
+    const q = buildQuery(filters, currentPage, eventYears);
     fetch(`/api/partners?${q}`)
       .then((r) => r.json())
       .then((res) => {
@@ -237,24 +216,37 @@ export function PartnersTable({ filters, refreshKey, onSelectPartner, onRefresh,
       })
       .catch(() => setData([]))
       .finally(() => setLoading(false));
-  }, [filters, refreshKey, currentPage]);
+  }, [filters, refreshKey, currentPage, eventYears]);
 
   const showOptional = OPTIONAL_HEADERS.filter((h) => filters.showColumns.includes(h.id));
   const expandedOptional = showOptional.flatMap((h): { id: string; label: string }[] => {
+    if (h.id === "danInvited") return DAN_INVITED_COL_IDS.map((colId) => ({ id: colId, label: DAN_HEADERS.find((d) => d.id === colId)!.label }));
     if (h.id === "inviter") return INVITER_COL_IDS.map((colId) => ({ id: colId, label: DAN_HEADERS.find((d) => d.id === colId)!.label }));
-    if (h.id === "giftSender") return GIFT_SENDER_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS.find((g) => g.id === colId)!.label }));
+    if (h.id === "giftRecipient") return GIFT_RECIPIENT_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS.find((g) => g.id === colId)!.label }));
     if (h.id === "giftItem") return GIFT_ITEM_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS.find((g) => g.id === colId)!.label }));
+    if (h.id === "giftQty") return GIFT_QTY_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS.find((g) => g.id === colId)!.label }));
+    if (h.id === "giftSender") return GIFT_SENDER_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS.find((g) => g.id === colId)!.label }));
     return [{ id: h.id, label: h.label }];
   });
-  const danFilterOn = filters.dan23 || filters.dan24 || filters.dan25 || filters.dan23Yn || filters.dan24Yn || filters.dan25Yn;
+  const isOptionalEventCol = (colId: string) =>
+    DAN_INVITED_COL_IDS.includes(colId) ||
+    INVITER_COL_IDS.includes(colId) ||
+    GIFT_RECIPIENT_COL_IDS.includes(colId) ||
+    GIFT_ITEM_COL_IDS.includes(colId) ||
+    GIFT_QTY_COL_IDS.includes(colId) ||
+    GIFT_SENDER_COL_IDS.includes(colId);
+  const danFilterOn = eventYears.some((y) => filters[`dan${y % 100}`] || filters[`dan${y % 100}Yn`]);
   const showDan = danFilterOn ? DAN_HEADERS : [];
-  const giftFilterOn = filters.gift2024 || filters.gift2025 || filters.gift24Yn || filters.gift25Yn || (filters.giftSender ?? "").trim() !== "";
+  const giftFilterOn =
+    eventYears.some((y) => filters[`gift${y}`] || filters[`gift${y % 100}Yn`]) || (filters.giftSender ?? "").trim() !== "";
   const showGift = giftFilterOn
-    ? GIFT_HEADERS.filter(
-        (h) =>
-          (h.id.startsWith("gift24") && (filters.gift2024 || filters.gift24Yn || (filters.giftSender ?? "").trim() !== "")) ||
-          (h.id.startsWith("gift25") && (filters.gift2025 || filters.gift25Yn || (filters.giftSender ?? "").trim() !== ""))
-      )
+    ? GIFT_HEADERS.filter((h) => {
+        const m = h.id.match(/^gift(\d{2})/);
+        if (!m) return true;
+        const yy = parseInt(m[1], 10);
+        const year = 2000 + yy;
+        return !!filters[`gift${year}`] || !!filters[`gift${yy}Yn`] || (filters.giftSender ?? "").trim() !== "";
+      })
     : [];
 
   const handleEmploymentStatusChange = async (partnerId: string, value: string) => {
@@ -701,7 +693,7 @@ export function PartnersTable({ filters, refreshKey, onSelectPartner, onRefresh,
                     </div>
                   ) : item.id === "history" ? (
                     getCellValue(p, item.id)
-                  ) : canEdit && (item.id === "businessCardDate" || INVITER_COL_IDS.includes(item.id as typeof INVITER_COL_IDS[number]) || GIFT_SENDER_COL_IDS.includes(item.id as typeof GIFT_SENDER_COL_IDS[number]) || GIFT_ITEM_COL_IDS.includes(item.id as typeof GIFT_ITEM_COL_IDS[number])) ? (
+                  ) : canEdit && (item.id === "businessCardDate" || isOptionalEventCol(item.id)) ? (
                     renderEditableCell(p, item.id)
                   ) : (
                     (getCellValue(p, item.id) || "-")

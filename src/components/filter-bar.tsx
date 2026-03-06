@@ -11,19 +11,23 @@ import { toast } from "sonner";
 const OPTIONAL_LABELS: Record<OptionalColumnId, string> = {
   businessCardDate: "명함 등록일",
   history: "히스토리",
-  inviter: "초청인",
-  giftSender: "선물 발송인",
-  giftItem: "선물 품목",
+  danInvited: "DAN초청여부",
+  inviter: "DAN초청인",
+  giftRecipient: "선물수신여부",
+  giftItem: "선물품목",
+  giftQty: "선물발송개수",
+  giftSender: "선물발송인",
 };
 
 interface FilterBarProps {
   filters: FilterState;
+  eventYears: number[];
   onFiltersChange: (f: FilterState) => void;
   onRefresh: () => void;
   canSaveFilter?: boolean;
 }
 
-export function FilterBar({ filters, onFiltersChange, onRefresh, canSaveFilter = false }: FilterBarProps) {
+export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh, canSaveFilter = false }: FilterBarProps) {
   const [savedList, setSavedList] = useState<{ id: string; name: string; filtersJson: string }[]>([]);
   const [savedId, setSavedId] = useState("");
   const [saveName, setSaveName] = useState("");
@@ -134,71 +138,48 @@ export function FilterBar({ filters, onFiltersChange, onRefresh, canSaveFilter =
         <div className="space-y-2">
           <Label className="text-xs font-medium">DAN초청여부 (Y/N)</Label>
           <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground w-12">DAN23</span>
-              <select
-                value={filters.dan23Yn}
-                onChange={(e) => onFiltersChange({ ...filters, dan23Yn: e.target.value as "" | "Y" | "N" })}
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
-              >
-                <option value="">전체</option>
-                <option value="Y">Y</option>
-                <option value="N">N</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground w-12">DAN24</span>
-              <select
-                value={filters.dan24Yn}
-                onChange={(e) => onFiltersChange({ ...filters, dan24Yn: e.target.value as "" | "Y" | "N" })}
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
-              >
-                <option value="">전체</option>
-                <option value="Y">Y</option>
-                <option value="N">N</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground w-12">DAN25</span>
-              <select
-                value={filters.dan25Yn}
-                onChange={(e) => onFiltersChange({ ...filters, dan25Yn: e.target.value as "" | "Y" | "N" })}
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
-              >
-                <option value="">전체</option>
-                <option value="Y">Y</option>
-                <option value="N">N</option>
-              </select>
-            </div>
+            {eventYears.map((year) => {
+              const yy = year % 100;
+              const keyOn = `dan${yy}` as keyof FilterState;
+              const keyYn = `dan${yy}Yn` as keyof FilterState;
+              return (
+                <div key={year} className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground w-12">DAN{yy}</span>
+                  <select
+                    value={String(filters[keyYn] ?? "")}
+                    onChange={(e) => onFiltersChange({ ...filters, [keyYn]: e.target.value as "" | "Y" | "N" })}
+                    className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
+                  >
+                    <option value="">전체</option>
+                    <option value="Y">Y</option>
+                    <option value="N">N</option>
+                  </select>
+                </div>
+              );
+            })}
           </div>
         </div>
         <div className="space-y-2">
           <Label className="text-xs font-medium">선물발송여부 (Y/N)</Label>
           <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground w-10">24년</span>
-              <select
-                value={filters.gift24Yn}
-                onChange={(e) => onFiltersChange({ ...filters, gift24Yn: e.target.value as "" | "Y" | "N" })}
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
-              >
-                <option value="">전체</option>
-                <option value="Y">Y</option>
-                <option value="N">N</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground w-10">25년</span>
-              <select
-                value={filters.gift25Yn}
-                onChange={(e) => onFiltersChange({ ...filters, gift25Yn: e.target.value as "" | "Y" | "N" })}
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
-              >
-                <option value="">전체</option>
-                <option value="Y">Y</option>
-                <option value="N">N</option>
-              </select>
-            </div>
+            {eventYears.map((year) => {
+              const yy = year % 100;
+              const keyYn = `gift${yy}Yn` as keyof FilterState;
+              return (
+                <div key={year} className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground w-10">{yy}년</span>
+                  <select
+                    value={String(filters[keyYn] ?? "")}
+                    onChange={(e) => onFiltersChange({ ...filters, [keyYn]: e.target.value as "" | "Y" | "N" })}
+                    className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
+                  >
+                    <option value="">전체</option>
+                    <option value="Y">Y</option>
+                    <option value="N">N</option>
+                  </select>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

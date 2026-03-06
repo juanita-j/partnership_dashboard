@@ -3,8 +3,6 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import * as XLSX from "xlsx";
 
-const YEARS = [2023, 2024, 2025] as const;
-
 function toEventsByYear(
   events: {
     year: number;
@@ -27,7 +25,6 @@ function toEventsByYear(
       giftSender?: string;
     }
   > = {};
-  for (const y of YEARS) byYear[y] = {};
   for (const e of events) {
     byYear[e.year] = {
       danInvitedRaw: e.danInvitedRaw ?? undefined,
@@ -39,6 +36,27 @@ function toEventsByYear(
     };
   }
   return byYear;
+}
+
+function buildDanColumns(years: number[]): { key: string; label: string }[] {
+  return years.flatMap((y) => {
+    const yy = y % 100;
+    return [
+      { key: `dan${yy}Invited`, label: `DAN${yy} 초청여부` },
+      { key: `dan${yy}Inviter`, label: `DAN${yy} 초청인` },
+    ];
+  });
+}
+function buildGiftColumns(years: number[]): { key: string; label: string }[] {
+  return years.flatMap((y) => {
+    const yy = y % 100;
+    return [
+      { key: `gift${yy}Recipient`, label: `${yy}년 선물수신인` },
+      { key: `gift${yy}Item`, label: `${yy}년 선물품목` },
+      { key: `gift${yy}Qty`, label: `${yy}년 선물발송개수` },
+      { key: `gift${yy}Sender`, label: `${yy}년 선물발송인` },
+    ];
+  });
 }
 
 const FIXED_COLUMNS: { key: string; label: string }[] = [
@@ -57,25 +75,6 @@ const OPTIONAL_COLUMNS: { key: string; label: string }[] = [
   { key: "history", label: "히스토리" },
 ];
 
-const DAN_COLUMNS: { key: string; label: string }[] = [
-  { key: "dan23Invited", label: "DAN23 초청여부" },
-  { key: "dan23Inviter", label: "DAN23 초청인" },
-  { key: "dan24Invited", label: "DAN24 초청여부" },
-  { key: "dan24Inviter", label: "DAN24 초청인" },
-  { key: "dan25Invited", label: "DAN25 초청여부" },
-  { key: "dan25Inviter", label: "DAN25 초청인" },
-];
-
-const GIFT_COLUMNS: { key: string; label: string }[] = [
-  { key: "gift24Recipient", label: "24년 선물수신인" },
-  { key: "gift24Item", label: "24년 선물품목" },
-  { key: "gift24Qty", label: "24년 선물발송개수" },
-  { key: "gift24Sender", label: "24년 선물발송인" },
-  { key: "gift25Recipient", label: "25년 선물수신인" },
-  { key: "gift25Item", label: "25년 선물품목" },
-  { key: "gift25Qty", label: "25년 선물발송개수" },
-  { key: "gift25Sender", label: "25년 선물발송인" },
-];
 
 function getCellValue(
   p: {
@@ -152,10 +151,24 @@ function getCellValue(
       return p.eventsByYear?.[2025]?.giftQtyRaw ?? "";
     case "gift25Sender":
       return p.eventsByYear?.[2025]?.giftSender ?? "";
-    default:
+    default: {
+      const danInvited = key.match(/^dan(\d{2})Invited$/);
+      if (danInvited) return p.eventsByYear?.[2000 + parseInt(danInvited[1], 10)]?.danInvitedRaw ?? "";
+      const danInviter = key.match(/^dan(\d{2})Inviter$/);
+      if (danInviter) return p.eventsByYear?.[2000 + parseInt(danInviter[1], 10)]?.danInviter ?? "";
+      const gift = key.match(/^gift(\d{2})(Recipient|Item|Qty|Sender)$/);
+      if (gift) {
+        const year = 2000 + parseInt(gift[1], 10);
+        const f = gift[2];
+        const field = f === "Recipient" ? "giftRecipient" : f === "Item" ? "giftItem" : f === "Qty" ? "giftQtyRaw" : "giftSender";
+        return p.eventsByYear?.[year]?.[field as keyof typeof p.eventsByYear[number]] ?? "";
+      }
       return "";
+    }
   }
 }
+
+const YEAR_RANGE = { min: 2023, max: 2030 };
 
 export async function GET(req: NextRequest) {
   try {
@@ -165,11 +178,6 @@ export async function GET(req: NextRequest) {
     const company = (searchParams.get("company") ?? "").trim();
     const department = (searchParams.get("department") ?? "").trim();
     const title = (searchParams.get("title") ?? "").trim();
-    const dan23 = searchParams.get("dan23") === "true";
-    const dan24 = searchParams.get("dan24") === "true";
-    const dan25 = searchParams.get("dan25") === "true";
-    const gift2024 = searchParams.get("gift2024") === "true";
-    const gift2025 = searchParams.get("gift2025") === "true";
     const inviter = (searchParams.get("inviter") ?? "").trim();
     const giftSender = (searchParams.get("giftSender") ?? "").trim();
     let showColumns: string[] = [];
@@ -182,6 +190,15 @@ export async function GET(req: NextRequest) {
     const idsParam = (searchParams.get("ids") ?? "").trim();
     const filterIds = idsParam ? idsParam.split(",").map((id) => id.trim()).filter(Boolean) : null;
 
+    const eventYearsRows = await prisma.yearlyEvent.findMany({
+      select: { year: true },
+      distinct: ["year"],
+      orderBy: { year: "asc" },
+    });
+    const eventYears = eventYearsRows.length ? eventYearsRows.map((r) => r.year) : [2023, 2024, 2025];
+    const DAN_COLUMNS = buildDanColumns(eventYears);
+    const GIFT_COLUMNS = buildGiftColumns(eventYears);
+
     const where: Record<string, unknown> = {};
     if (filterIds && filterIds.length > 0) {
       where.id = { in: filterIds };
@@ -192,11 +209,17 @@ export async function GET(req: NextRequest) {
       if (department) where.department = { contains: department };
       if (title) where.title = { contains: title };
       const eventConditions: Record<string, unknown>[] = [];
-      if (dan23) eventConditions.push({ year: 2023, danInvitedRaw: "Y" });
-      if (dan24) eventConditions.push({ year: 2024, danInvitedRaw: "Y" });
-      if (dan25) eventConditions.push({ year: 2025, danInvitedRaw: "Y" });
-      if (gift2024) eventConditions.push({ year: 2024, giftRecipient: "Y" });
-      if (gift2025) eventConditions.push({ year: 2025, giftRecipient: "Y" });
+      for (let year = YEAR_RANGE.min; year <= YEAR_RANGE.max; year++) {
+        const yy = year % 100;
+        if (searchParams.get(`dan${yy}`) === "true") eventConditions.push({ year, danInvitedRaw: "Y" });
+        const danYn = searchParams.get(`dan${yy}Yn`) ?? "";
+        if (danYn === "Y") eventConditions.push({ year, danInvitedRaw: "Y" });
+        if (danYn === "N") eventConditions.push({ year, danInvitedRaw: "N" });
+        if (searchParams.get(`gift${year}`) === "true") eventConditions.push({ year, giftRecipient: "Y" });
+        const giftYn = searchParams.get(`gift${yy}Yn`) ?? "";
+        if (giftYn === "Y") eventConditions.push({ year, giftRecipient: "Y" });
+        if (giftYn === "N") eventConditions.push({ year, giftRecipient: "N" });
+      }
       if (inviter) eventConditions.push({ danInviter: { contains: inviter } });
       if (giftSender) eventConditions.push({ giftSender: { contains: giftSender } });
       if (eventConditions.length > 0) {
@@ -209,7 +232,7 @@ export async function GET(req: NextRequest) {
 
     const partners = await prisma.partner.findMany({
       where: where as Prisma.PartnerWhereInput,
-      include: { yearlyEvents: { where: { year: { in: [...YEARS] } } } },
+      include: { yearlyEvents: true },
       orderBy: { updatedAt: "desc" },
     });
 
@@ -223,14 +246,26 @@ export async function GET(req: NextRequest) {
     const columns: { key: string; label: string }[] = [...FIXED_COLUMNS];
     if (showColumns.includes("businessCardDate")) columns.push(OPTIONAL_COLUMNS[0]);
     if (showColumns.includes("history")) columns.push(OPTIONAL_COLUMNS[1]);
-    if (dan23 || dan24 || dan25) columns.push(...DAN_COLUMNS);
-    if (gift2024 || gift2025) {
-      if (gift2024) columns.push(...GIFT_COLUMNS.filter((c) => c.key.startsWith("gift24")));
-      if (gift2025) columns.push(...GIFT_COLUMNS.filter((c) => c.key.startsWith("gift25")));
+    if (showColumns.includes("danInvited")) columns.push(...DAN_COLUMNS.filter((c) => c.key.endsWith("Invited")));
+    if (showColumns.includes("inviter")) columns.push(...DAN_COLUMNS.filter((c) => c.key.endsWith("Inviter")));
+    if (showColumns.includes("giftRecipient")) columns.push(...GIFT_COLUMNS.filter((c) => c.key.endsWith("Recipient")));
+    if (showColumns.includes("giftItem")) columns.push(...GIFT_COLUMNS.filter((c) => c.key.endsWith("Item")));
+    if (showColumns.includes("giftQty")) columns.push(...GIFT_COLUMNS.filter((c) => c.key.endsWith("Qty")));
+    if (showColumns.includes("giftSender")) columns.push(...GIFT_COLUMNS.filter((c) => c.key.endsWith("Sender")));
+    const danFilterOn = eventYears.some((y) => searchParams.get(`dan${y % 100}`) === "true" || (searchParams.get(`dan${y % 100}Yn`) ?? "") !== "");
+    if (danFilterOn) columns.push(...DAN_COLUMNS);
+    const giftFilterOn = eventYears.some((y) => searchParams.get(`gift${y}`) === "true" || (searchParams.get(`gift${y % 100}Yn`) ?? "") !== "") || giftSender !== "";
+    if (giftFilterOn) {
+      for (const y of eventYears) {
+        const yy = y % 100;
+        if (searchParams.get(`gift${y}`) === "true" || (searchParams.get(`gift${yy}Yn`) ?? "") !== "" || giftSender !== "")
+          columns.push(...GIFT_COLUMNS.filter((c) => c.key.startsWith(`gift${yy}`)));
+      }
     }
+    const columnsDeduped = columns.filter((c, i) => columns.findIndex((x) => x.key === c.key) === i);
 
-    const headerRow = columns.map((c) => c.label);
-    const dataRows = rows.map((p) => columns.map((c) => getCellValue(p, c.key)));
+    const headerRow = columnsDeduped.map((c) => c.label);
+    const dataRows = rows.map((p) => columnsDeduped.map((c) => getCellValue(p, c.key)));
 
     const ws = XLSX.utils.aoa_to_sheet([headerRow, ...dataRows]);
     const wb = XLSX.utils.book_new();

@@ -10,10 +10,19 @@ export const FIXED_COLUMN_IDS = [
   "address",
 ] as const;
 
-/** 선택 컬럼: SHOW 체크 시 테이블에 추가 */
-export const OPTIONAL_COLUMN_IDS = ["businessCardDate", "history", "inviter", "giftSender", "giftItem"] as const;
+/** 선택 컬럼: SHOW 체크 시 테이블에 추가 (그룹 선택 시 연도별 컬럼 확장) */
+export const OPTIONAL_COLUMN_IDS = [
+  "businessCardDate",
+  "history",
+  "danInvited",
+  "inviter",
+  "giftRecipient",
+  "giftItem",
+  "giftQty",
+  "giftSender",
+] as const;
 
-/** 필터 활성화 시 자동 노출되는 DAN 컬럼 */
+/** 필터 활성화 시 자동 노출되는 DAN 컬럼 (연도는 EVENT_YEARS 기반 동적 생성) */
 export const DAN_AUTO_COLUMNS = [
   "dan23Invited",
   "dan23Inviter",
@@ -23,7 +32,7 @@ export const DAN_AUTO_COLUMNS = [
   "dan25Inviter",
 ] as const;
 
-/** 필터 활성화 시 자동 노출되는 선물 컬럼 */
+/** 필터 활성화 시 자동 노출되는 선물 컬럼 (연도는 EVENT_YEARS 기반 동적 생성) */
 export const GIFT_AUTO_COLUMNS = [
   "gift24Recipient",
   "gift24Item",
@@ -51,19 +60,11 @@ export interface FilterState {
   company: string;
   department: string;
   title: string;
-  dan23: boolean;
-  dan24: boolean;
-  dan25: boolean;
-  dan23Yn: FilterYn;
-  dan24Yn: FilterYn;
-  dan25Yn: FilterYn;
-  gift2024: boolean;
-  gift2025: boolean;
-  gift24Yn: FilterYn;
-  gift25Yn: FilterYn;
   inviter: string;
   giftSender: string;
   showColumns: OptionalColumnId[];
+  /** 동적 연도용: dan23, dan24, ..., dan26 / dan23Yn, ... / gift2024, ... / gift24Yn, ... */
+  [key: string]: string | boolean | FilterYn | OptionalColumnId[] | undefined;
 }
 
 export const defaultFilters: FilterState = {
@@ -72,16 +73,6 @@ export const defaultFilters: FilterState = {
   company: "",
   department: "",
   title: "",
-  dan23: false,
-  dan24: false,
-  dan25: false,
-  dan23Yn: "",
-  dan24Yn: "",
-  dan25Yn: "",
-  gift2024: false,
-  gift2025: false,
-  gift24Yn: "",
-  gift25Yn: "",
   inviter: "",
   giftSender: "",
   showColumns: [],

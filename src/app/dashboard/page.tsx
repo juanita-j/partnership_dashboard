@@ -8,26 +8,23 @@ import { PartnerDetailSheet } from "@/components/partner-detail-sheet";
 import { ExcelUploadDialog } from "@/components/excel-upload-dialog";
 import { Button } from "@/components/ui/button";
 import { Upload, Plus, Download } from "lucide-react";
-import type { FilterState } from "./types";
+import type { FilterState, FilterYn } from "./types";
 import { defaultFilters } from "./types";
 
-function filtersFromSearchParams(sp: URLSearchParams): FilterState {
-  return {
+const YEAR_RANGE = { min: 2023, max: 2030 };
+function eventYearsFromRange(): number[] {
+  const y: number[] = [];
+  for (let i = YEAR_RANGE.min; i <= YEAR_RANGE.max; i++) y.push(i);
+  return y;
+}
+
+function filtersFromSearchParams(sp: URLSearchParams, eventYears: number[]): FilterState {
+  const base: FilterState = {
     employmentStatus: sp.get("employmentStatus") ?? "",
     name: sp.get("name") ?? "",
     company: sp.get("company") ?? "",
     department: sp.get("department") ?? "",
     title: sp.get("title") ?? "",
-    dan23: sp.get("dan23") === "true",
-    dan24: sp.get("dan24") === "true",
-    dan25: sp.get("dan25") === "true",
-    dan23Yn: (sp.get("dan23Yn") === "Y" || sp.get("dan23Yn") === "N" ? sp.get("dan23Yn") : "") as FilterState["dan23Yn"],
-    dan24Yn: (sp.get("dan24Yn") === "Y" || sp.get("dan24Yn") === "N" ? sp.get("dan24Yn") : "") as FilterState["dan24Yn"],
-    dan25Yn: (sp.get("dan25Yn") === "Y" || sp.get("dan25Yn") === "N" ? sp.get("dan25Yn") : "") as FilterState["dan25Yn"],
-    gift2024: sp.get("gift2024") === "true",
-    gift2025: sp.get("gift2025") === "true",
-    gift24Yn: (sp.get("gift24Yn") === "Y" || sp.get("gift24Yn") === "N" ? sp.get("gift24Yn") : "") as FilterState["gift24Yn"],
-    gift25Yn: (sp.get("gift25Yn") === "Y" || sp.get("gift25Yn") === "N" ? sp.get("gift25Yn") : "") as FilterState["gift25Yn"],
     inviter: sp.get("inviter") ?? "",
     giftSender: sp.get("giftSender") ?? "",
     showColumns: (() => {
@@ -40,33 +37,41 @@ function filtersFromSearchParams(sp: URLSearchParams): FilterState {
       }
     })(),
   };
+  for (const year of eventYears) {
+    const yy = year % 100;
+    base[`dan${yy}`] = sp.get(`dan${yy}`) === "true";
+    const danYn = sp.get(`dan${yy}Yn`);
+    base[`dan${yy}Yn`] = (danYn === "Y" || danYn === "N" ? danYn : "") as FilterYn;
+    base[`gift${year}`] = sp.get(`gift${year}`) === "true";
+    const giftYn = sp.get(`gift${yy}Yn`);
+    base[`gift${yy}Yn`] = (giftYn === "Y" || giftYn === "N" ? giftYn : "") as FilterYn;
+  }
+  return base;
 }
 
-function filtersToSearchParams(f: FilterState): URLSearchParams {
+function filtersToSearchParams(f: FilterState, eventYears: number[]): URLSearchParams {
   const p = new URLSearchParams();
   if (f.employmentStatus) p.set("employmentStatus", f.employmentStatus);
   if (f.name) p.set("name", f.name);
   if (f.company) p.set("company", f.company);
   if (f.department) p.set("department", f.department);
   if (f.title) p.set("title", f.title);
-  if (f.dan23) p.set("dan23", "true");
-  if (f.dan24) p.set("dan24", "true");
-  if (f.dan25) p.set("dan25", "true");
-  if (f.dan23Yn) p.set("dan23Yn", f.dan23Yn);
-  if (f.dan24Yn) p.set("dan24Yn", f.dan24Yn);
-  if (f.dan25Yn) p.set("dan25Yn", f.dan25Yn);
-  if (f.gift2024) p.set("gift2024", "true");
-  if (f.gift2025) p.set("gift2025", "true");
-  if (f.gift24Yn) p.set("gift24Yn", f.gift24Yn);
-  if (f.gift25Yn) p.set("gift25Yn", f.gift25Yn);
   if (f.inviter) p.set("inviter", f.inviter);
   if (f.giftSender) p.set("giftSender", f.giftSender);
   if (f.showColumns.length) p.set("showColumns", JSON.stringify(f.showColumns));
+  for (const year of eventYears) {
+    const yy = year % 100;
+    if (f[`dan${yy}`]) p.set(`dan${yy}`, "true");
+    if (f[`dan${yy}Yn`]) p.set(`dan${yy}Yn`, String(f[`dan${yy}Yn`]));
+    if (f[`gift${year}`]) p.set(`gift${year}`, "true");
+    if (f[`gift${yy}Yn`]) p.set(`gift${yy}Yn`, String(f[`gift${yy}Yn`]));
+  }
   return p;
 }
 
 function DashboardContent() {
   const searchParams = useSearchParams();
+  const [eventYears, setEventYears] = useState<number[]>(eventYearsFromRange());
   const [filters, setFiltersState] = useState<FilterState>(defaultFilters);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const [excelOpen, setExcelOpen] = useState(false);
@@ -74,21 +79,36 @@ function DashboardContent() {
   const editor = true;
 
   useEffect(() => {
-    setFiltersState(filtersFromSearchParams(searchParams));
-  }, [searchParams]);
-
-  const setFilters = useCallback((f: FilterState) => {
-    setFiltersState(f);
-    const q = filtersToSearchParams(f).toString();
-    const url = q ? `?${q}` : window.location.pathname;
-    window.history.replaceState(null, "", url);
+    fetch("/api/event-years")
+      .then((r) => r.json())
+      .then((data: { years?: number[] }) => {
+        if (Array.isArray(data.years) && data.years.length > 0) {
+          const sorted = [...data.years].sort((a, b) => a - b);
+          setEventYears(sorted);
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    setFiltersState(filtersFromSearchParams(searchParams, eventYears));
+  }, [searchParams, eventYears]);
+
+  const setFilters = useCallback(
+    (f: FilterState) => {
+      setFiltersState(f);
+      const q = filtersToSearchParams(f, eventYears).toString();
+      const url = q ? `?${q}` : window.location.pathname;
+      window.history.replaceState(null, "", url);
+    },
+    [eventYears]
+  );
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   const exportUrl =
     typeof window !== "undefined"
-      ? `/api/export/xlsx?${filtersToSearchParams(filters).toString()}&columns=${encodeURIComponent(JSON.stringify(filters.showColumns))}`
+      ? `/api/export/xlsx?${filtersToSearchParams(filters, eventYears).toString()}&columns=${encodeURIComponent(JSON.stringify(filters.showColumns))}`
       : "#";
 
   return (
@@ -127,9 +147,10 @@ function DashboardContent() {
           )}
         </div>
       </div>
-      <FilterBar filters={filters} onFiltersChange={setFilters} onRefresh={refresh} canSaveFilter={!!editor} />
+      <FilterBar filters={filters} eventYears={eventYears} onFiltersChange={setFilters} onRefresh={refresh} canSaveFilter={!!editor} />
       <PartnersTable
         filters={filters}
+        eventYears={eventYears}
         refreshKey={refreshKey}
         onSelectPartner={setSelectedPartnerId}
         onRefresh={refresh}
@@ -137,6 +158,7 @@ function DashboardContent() {
       />
       <PartnerDetailSheet
         partnerId={selectedPartnerId}
+        eventYears={eventYears}
         onClose={() => setSelectedPartnerId(null)}
         onSaved={refresh}
         canEdit={!!editor}

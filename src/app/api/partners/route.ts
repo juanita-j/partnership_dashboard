@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { partnerCreateSchema } from "@/lib/validations";
 import type { Prisma } from "@prisma/client";
 
-const YEARS = [2023, 2024, 2025] as const;
+const YEAR_RANGE = { min: 2023, max: 2030 };
 
 function toEventsByYear(
   events: {
@@ -27,7 +27,6 @@ function toEventsByYear(
       giftSender?: string;
     }
   > = {};
-  for (const y of YEARS) byYear[y] = {};
   for (const e of events) {
     byYear[e.year] = {
       danInvitedRaw: e.danInvitedRaw ?? undefined,
@@ -51,59 +50,32 @@ export async function GET(req: NextRequest) {
     const company = (searchParams.get("company") ?? "").trim();
     const department = (searchParams.get("department") ?? "").trim();
     const title = (searchParams.get("title") ?? "").trim();
-    const dan23 = searchParams.get("dan23") === "true";
-    const dan24 = searchParams.get("dan24") === "true";
-    const dan25 = searchParams.get("dan25") === "true";
-    const dan23Yn = searchParams.get("dan23Yn") ?? "";
-    const dan24Yn = searchParams.get("dan24Yn") ?? "";
-    const dan25Yn = searchParams.get("dan25Yn") ?? "";
-    const gift2024 = searchParams.get("gift2024") === "true";
-    const gift2025 = searchParams.get("gift2025") === "true";
-    const gift24Yn = searchParams.get("gift24Yn") ?? "";
-    const gift25Yn = searchParams.get("gift25Yn") ?? "";
     const inviter = (searchParams.get("inviter") ?? "").trim();
     const giftSender = (searchParams.get("giftSender") ?? "").trim();
 
-    const where: Record<string, unknown> = {};
-
-    if (employmentStatus) {
-      where.employmentStatus = employmentStatus;
-    }
-    if (name) {
-      where.name = { contains: name };
-    }
-    if (company) {
-      where.companyNormalized = { contains: company };
-    }
-    if (department) {
-      where.department = { contains: department };
-    }
-    if (title) {
-      where.title = { contains: title };
-    }
-
     const eventConditions: Record<string, unknown>[] = [];
-    if (dan23) eventConditions.push({ year: 2023, danInvitedRaw: "Y" });
-    if (dan24) eventConditions.push({ year: 2024, danInvitedRaw: "Y" });
-    if (dan25) eventConditions.push({ year: 2025, danInvitedRaw: "Y" });
-    if (dan23Yn === "Y") eventConditions.push({ year: 2023, danInvitedRaw: "Y" });
-    if (dan23Yn === "N") eventConditions.push({ year: 2023, danInvitedRaw: "N" });
-    if (dan24Yn === "Y") eventConditions.push({ year: 2024, danInvitedRaw: "Y" });
-    if (dan24Yn === "N") eventConditions.push({ year: 2024, danInvitedRaw: "N" });
-    if (dan25Yn === "Y") eventConditions.push({ year: 2025, danInvitedRaw: "Y" });
-    if (dan25Yn === "N") eventConditions.push({ year: 2025, danInvitedRaw: "N" });
-    if (gift2024) eventConditions.push({ year: 2024, giftRecipient: "Y" });
-    if (gift2025) eventConditions.push({ year: 2025, giftRecipient: "Y" });
-    if (gift24Yn === "Y") eventConditions.push({ year: 2024, giftRecipient: "Y" });
-    if (gift24Yn === "N") eventConditions.push({ year: 2024, giftRecipient: "N" });
-    if (gift25Yn === "Y") eventConditions.push({ year: 2025, giftRecipient: "Y" });
-    if (gift25Yn === "N") eventConditions.push({ year: 2025, giftRecipient: "N" });
-    if (inviter) {
-      eventConditions.push({ danInviter: { contains: inviter } });
+    for (let year = YEAR_RANGE.min; year <= YEAR_RANGE.max; year++) {
+      const yy = year % 100;
+      const danOn = searchParams.get(`dan${yy}`) === "true";
+      const danYn = searchParams.get(`dan${yy}Yn`) ?? "";
+      if (danOn) eventConditions.push({ year, danInvitedRaw: "Y" });
+      if (danYn === "Y") eventConditions.push({ year, danInvitedRaw: "Y" });
+      if (danYn === "N") eventConditions.push({ year, danInvitedRaw: "N" });
+      const giftOn = searchParams.get(`gift${year}`) === "true";
+      const giftYn = searchParams.get(`gift${yy}Yn`) ?? "";
+      if (giftOn) eventConditions.push({ year, giftRecipient: "Y" });
+      if (giftYn === "Y") eventConditions.push({ year, giftRecipient: "Y" });
+      if (giftYn === "N") eventConditions.push({ year, giftRecipient: "N" });
     }
-    if (giftSender) {
-      eventConditions.push({ giftSender: { contains: giftSender } });
-    }
+    if (inviter) eventConditions.push({ danInviter: { contains: inviter } });
+    if (giftSender) eventConditions.push({ giftSender: { contains: giftSender } });
+
+    const where: Record<string, unknown> = {};
+    if (employmentStatus) where.employmentStatus = employmentStatus;
+    if (name) where.name = { contains: name };
+    if (company) where.companyNormalized = { contains: company };
+    if (department) where.department = { contains: department };
+    if (title) where.title = { contains: title };
 
     if (eventConditions.length > 0) {
       where.AND = (where.AND as Record<string, unknown>[]) ?? [];
@@ -115,9 +87,7 @@ export async function GET(req: NextRequest) {
     const [partners, total] = await Promise.all([
       prisma.partner.findMany({
         where: where as Prisma.PartnerWhereInput,
-        include: {
-          yearlyEvents: { where: { year: { in: [...YEARS] } } },
-        },
+        include: { yearlyEvents: true },
         orderBy: { updatedAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
