@@ -32,6 +32,11 @@ function filtersFromSearchParams(sp: URLSearchParams, eventYears: number[]): Fil
         return [];
       }
     })(),
+    showEventYears: (() => {
+      const v = sp.get("showEventYears");
+      if (!v) return [];
+      return v.split(",").map((y) => parseInt(y.trim(), 10)).filter((y) => !isNaN(y));
+    })(),
   };
   for (const year of eventYears) {
     const yy = year % 100;
@@ -55,6 +60,7 @@ function filtersToSearchParams(f: FilterState, eventYears: number[]): URLSearchP
   if (f.inviter) p.set("inviter", f.inviter);
   if (f.giftSender) p.set("giftSender", f.giftSender);
   if (f.showColumns.length) p.set("showColumns", JSON.stringify(f.showColumns));
+  if (f.showEventYears?.length) p.set("showEventYears", f.showEventYears.join(","));
   for (const year of eventYears) {
     const yy = year % 100;
     if (f[`dan${yy}`]) p.set(`dan${yy}`, "true");
@@ -102,9 +108,7 @@ function DashboardContent() {
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   const exportUrl =
-    typeof window !== "undefined"
-      ? `/api/export/xlsx?${filtersToSearchParams(filters, eventYears).toString()}&columns=${encodeURIComponent(JSON.stringify(filters.showColumns))}`
-      : "#";
+    `/api/export/xlsx?${filtersToSearchParams(filters, eventYears).toString()}&columns=${encodeURIComponent(JSON.stringify(filters.showColumns))}`;
 
   return (
     <div className="space-y-4">
@@ -138,13 +142,13 @@ function DashboardContent() {
               </Button>
               <Button size="sm" onClick={() => setSelectedPartnerId("new")}>
                 <Plus className="h-4 w-4 mr-2" />
-                파트너 추가
+                파트너사 추가
               </Button>
             </>
           )}
         </div>
       </div>
-      <FilterBar filters={filters} eventYears={eventYears} onFiltersChange={setFilters} onRefresh={refresh} canSaveFilter={!!editor} />
+      <FilterBar filters={filters} eventYears={eventYears} onFiltersChange={setFilters} onRefresh={refresh} />
       <PartnersTable
         filters={filters}
         eventYears={eventYears}

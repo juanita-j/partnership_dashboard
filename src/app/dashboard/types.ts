@@ -63,8 +63,10 @@ export interface FilterState {
   inviter: string;
   giftSender: string;
   showColumns: OptionalColumnId[];
+  /** SHOW에서 선택한 연도 (DAN/선물 컬럼을 이 연도들만 표시) */
+  showEventYears?: number[];
   /** 동적 연도용: dan23, dan24, ..., dan26 / dan23Yn, ... / gift2024, ... / gift24Yn, ... */
-  [key: string]: string | boolean | FilterYn | OptionalColumnId[] | undefined;
+  [key: string]: string | boolean | FilterYn | OptionalColumnId[] | number[] | undefined;
 }
 
 export const defaultFilters: FilterState = {
@@ -76,4 +78,5 @@ export const defaultFilters: FilterState = {
   inviter: "",
   giftSender: "",
   showColumns: [],
+  showEventYears: [],
 };

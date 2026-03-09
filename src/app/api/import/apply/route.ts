@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
           include: { yearlyEvents: true },
         });
         if (!existing) continue;
+        if (existing.employmentStatus === "퇴사") continue;
         const updates: Record<string, unknown> = {};
         const historyParts: string[] = [];
         if (p.name != null && p.name !== "" && p.name !== existing.name) {

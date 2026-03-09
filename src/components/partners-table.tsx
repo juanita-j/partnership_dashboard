@@ -144,6 +144,29 @@ function buildOptionalColIdArrays(eventYears: number[]) {
 const DAN_YN_OPTIONS = ["", "Y", "N"];
 const GIFT_YN_OPTIONS = ["", "Y", "N"];
 
+/** Y/N·숫자만 나오는 컬럼은 좁게, 회사/이름은 넓게, 휴대폰/부서/직함/전자메일/주소는 넓히고 줄바꿈 방지 */
+function getColWidthClass(colId: string): string {
+  if (colId === "company" || colId === "name") return "min-w-[7.5rem]";
+  if (colId === "phone") return "min-w-[6.5rem] whitespace-nowrap";
+  if (colId === "department" || colId === "title") return "min-w-[5rem] whitespace-nowrap";
+  if (colId === "email") return "min-w-[8rem] whitespace-nowrap";
+  if (colId === "address") return "min-w-[9rem] whitespace-nowrap";
+  if (/^dan\d+Invited$/.test(colId) || /^gift\d+Recipient$/.test(colId) || /^gift\d+Qty$/.test(colId))
+    return "w-14 min-w-[2.5rem]";
+  return "";
+}
+
+function isNarrowCol(colId: string): boolean {
+  return /^dan\d+Invited$/.test(colId) || /^gift\d+Recipient$/.test(colId) || /^gift\d+Qty$/.test(colId);
+}
+
+/** 휴대폰/부서/직함/이메일/주소는 getColWidthClass에 이미 whitespace-nowrap 포함 */
+function cellClassName(colId: string): string {
+  const w = getColWidthClass(colId);
+  if (!w) return "";
+  return w.includes("whitespace-nowrap") ? w : `${w}${isNarrowCol(colId) ? " whitespace-nowrap" : ""}`;
+}
+
 function colIdToPartnerField(colId: string): string | null {
   const map: Record<string, string> = {
     company: "companyNormalized",
@@ -246,9 +269,12 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
     setEditingOriginalValue(null);
   };
 
+  const displayEventYears = (filters.showEventYears?.length ? filters.showEventYears : eventYears) as number[];
   const DAN_HEADERS = buildDanHeaders(eventYears);
   const GIFT_HEADERS = buildGiftHeaders(eventYears);
-  const { DAN_INVITED_COL_IDS, INVITER_COL_IDS, GIFT_RECIPIENT_COL_IDS, GIFT_ITEM_COL_IDS, GIFT_QTY_COL_IDS, GIFT_SENDER_COL_IDS } = buildOptionalColIdArrays(eventYears);
+  const { DAN_INVITED_COL_IDS, INVITER_COL_IDS, GIFT_RECIPIENT_COL_IDS, GIFT_ITEM_COL_IDS, GIFT_QTY_COL_IDS, GIFT_SENDER_COL_IDS } = buildOptionalColIdArrays(displayEventYears);
+  const DAN_HEADERS_DISPLAY = buildDanHeaders(displayEventYears);
+  const GIFT_HEADERS_DISPLAY = buildGiftHeaders(displayEventYears);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -269,12 +295,12 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
 
   const showOptional = OPTIONAL_HEADERS.filter((h) => filters.showColumns.includes(h.id));
   const expandedOptional = showOptional.flatMap((h): { id: string; label: string }[] => {
-    if (h.id === "danInvited") return DAN_INVITED_COL_IDS.map((colId) => ({ id: colId, label: DAN_HEADERS.find((d) => d.id === colId)!.label }));
-    if (h.id === "inviter") return INVITER_COL_IDS.map((colId) => ({ id: colId, label: DAN_HEADERS.find((d) => d.id === colId)!.label }));
-    if (h.id === "giftRecipient") return GIFT_RECIPIENT_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS.find((g) => g.id === colId)!.label }));
-    if (h.id === "giftItem") return GIFT_ITEM_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS.find((g) => g.id === colId)!.label }));
-    if (h.id === "giftQty") return GIFT_QTY_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS.find((g) => g.id === colId)!.label }));
-    if (h.id === "giftSender") return GIFT_SENDER_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS.find((g) => g.id === colId)!.label }));
+    if (h.id === "danInvited") return DAN_INVITED_COL_IDS.map((colId) => ({ id: colId, label: DAN_HEADERS_DISPLAY.find((d) => d.id === colId)!.label }));
+    if (h.id === "inviter") return INVITER_COL_IDS.map((colId) => ({ id: colId, label: DAN_HEADERS_DISPLAY.find((d) => d.id === colId)!.label }));
+    if (h.id === "giftRecipient") return GIFT_RECIPIENT_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === colId)!.label }));
+    if (h.id === "giftItem") return GIFT_ITEM_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === colId)!.label }));
+    if (h.id === "giftQty") return GIFT_QTY_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === colId)!.label }));
+    if (h.id === "giftSender") return GIFT_SENDER_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === colId)!.label }));
     return [{ id: h.id, label: h.label }];
   });
   const isOptionalEventCol = (colId: string) =>
@@ -711,7 +737,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
         )}
       </div>
       <div className="rounded-lg border overflow-x-auto">
-      <Table>
+      <Table className="text-[13px]">
         <TableHeader>
           <TableRow>
             <TableHead className="w-10 px-2" onClick={(e) => e.stopPropagation()}>
@@ -732,7 +758,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
               return (
                 <TableHead
                   key={h.id}
-                  className={`whitespace-nowrap ${sortField ? "cursor-pointer select-none hover:bg-muted/50" : ""}`}
+                  className={`whitespace-nowrap ${getColWidthClass(h.id)} ${sortField ? "cursor-pointer select-none hover:bg-muted/50" : ""}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (sortField) handleSort(h.id);
@@ -751,7 +777,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
               return (
                 <TableHead
                   key={item.id}
-                  className={`whitespace-nowrap ${sortField ? "cursor-pointer select-none hover:bg-muted/50" : ""}`}
+                  className={`whitespace-nowrap ${getColWidthClass(item.id)} ${sortField ? "cursor-pointer select-none hover:bg-muted/50" : ""}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (sortField) handleSort(item.id);
@@ -765,12 +791,12 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
               );
             })}
             {showDan.map((h) => (
-              <TableHead key={h.id} className="whitespace-nowrap">
+              <TableHead key={h.id} className={`whitespace-nowrap ${getColWidthClass(h.id)}`}>
                 {h.label}
               </TableHead>
             ))}
             {showGift.map((h) => (
-              <TableHead key={h.id} className="whitespace-nowrap">
+              <TableHead key={h.id} className={`whitespace-nowrap ${getColWidthClass(h.id)}`}>
                 {h.label}
               </TableHead>
             ))}
@@ -796,12 +822,12 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                 />
               </TableCell>
               {FIXED_HEADERS.map((h) => (
-                <TableCell key={h.id} onClick={(e) => canEdit && e.stopPropagation()}>
+                <TableCell key={h.id} className={cellClassName(h.id) || undefined} onClick={(e) => canEdit && e.stopPropagation()}>
                   {canEdit ? renderEditableCell(p, h.id) : (getCellValue(p, h.id) || "-")}
                 </TableCell>
               ))}
               {expandedOptional.map((item) => (
-                <TableCell key={item.id} onClick={(e) => (item.id === "history" || (canEdit && (item.id === "businessCardDate" || DAN_HEADERS.some((d) => d.id === item.id) || GIFT_HEADERS.some((g) => g.id === item.id)))) && e.stopPropagation()}>
+                <TableCell key={item.id} className={cellClassName(item.id) || undefined} onClick={(e) => (item.id === "history" || (canEdit && (item.id === "businessCardDate" || DAN_HEADERS.some((d) => d.id === item.id) || GIFT_HEADERS.some((g) => g.id === item.id)))) && e.stopPropagation()}>
                   {item.id === "history" && canEdit && editingHistoryId === p.id ? (
                     <div className="flex gap-1 items-start min-w-[200px]" onClick={(e) => e.stopPropagation()}>
                       <textarea
@@ -839,12 +865,12 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                 </TableCell>
               ))}
               {showDan.map((h) => (
-                <TableCell key={h.id} onClick={(e) => canEdit && e.stopPropagation()}>
+                <TableCell key={h.id} className={cellClassName(h.id) || undefined} onClick={(e) => canEdit && e.stopPropagation()}>
                   {canEdit ? renderEditableCell(p, h.id) : (getCellValue(p, h.id) || "-")}
                 </TableCell>
               ))}
               {showGift.map((h) => (
-                <TableCell key={h.id} onClick={(e) => canEdit && e.stopPropagation()}>
+                <TableCell key={h.id} className={cellClassName(h.id) || undefined} onClick={(e) => canEdit && e.stopPropagation()}>
                   {canEdit ? renderEditableCell(p, h.id) : (getCellValue(p, h.id) || "-")}
                 </TableCell>
               ))}

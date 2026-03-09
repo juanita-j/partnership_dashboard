@@ -46,6 +46,7 @@ export default function CompanyAliasPage() {
   const [editingIds, setEditingIds] = useState<string[] | null>(null);
   const [form, setForm] = useState({ normalizedName: "", alias: "" });
   const [saving, setSaving] = useState(false);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const editor = true;
 
   const load = () => {
@@ -61,6 +62,8 @@ export default function CompanyAliasPage() {
   }, []);
 
   const grouped = groupByNormalizedName(list);
+  const sortedGrouped =
+    sortOrder === "desc" ? [...grouped].sort((a, b) => b.normalizedName.localeCompare(a.normalizedName)) : grouped;
 
   const handleAdd = () => {
     if (!editor) return;
@@ -152,11 +155,10 @@ export default function CompanyAliasPage() {
           </Button>
         )}
       </div>
-      <p className="text-sm text-muted-foreground">
-        엑셀파일로 업로드하거나 직접 입력한 회사명이 &apos;표준명&apos;으로 자동 변환됩니다. &apos;별칭&apos;에 여러 표기를 등록하세요.
-        <br />
-        *한국 회사명은 한국어로 통일, 글로벌 회사명은 알파벳 표기로 통일합니다.
-      </p>
+      <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+        <li>엑셀파일로 업로드/직접 입력한 회사명 중 &apos;별칭&apos;에 해당되는 회사명이 &apos;표준명&apos;으로 자동 변환됩니다.</li>
+        <li>한국 회사명은 한국어로 통일, 글로벌 회사명은 알파벳 표기로 통일합니다.</li>
+      </ul>
       {loading ? (
         <div className="py-8 text-center text-muted-foreground">로딩 중...</div>
       ) : (
@@ -164,13 +166,21 @@ export default function CompanyAliasPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>표준명</TableHead>
+                <TableHead
+                  className="cursor-pointer select-none hover:bg-muted/50"
+                  onClick={() => setSortOrder((o) => (o === "asc" ? "desc" : "asc"))}
+                >
+                  <span className="inline-flex items-center gap-0.5">
+                    표준명
+                    <span className="text-muted-foreground">{sortOrder === "asc" ? " ↑" : " ↓"}</span>
+                  </span>
+                </TableHead>
                 <TableHead>별칭</TableHead>
                 {editor && <TableHead></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {grouped.map((row) => (
+              {sortedGrouped.map((row) => (
                 <TableRow key={row.normalizedName}>
                   <TableCell className="font-medium">{row.normalizedName}</TableCell>
                   <TableCell>{row.aliases.join(", ")}</TableCell>

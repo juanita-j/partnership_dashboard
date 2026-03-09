@@ -225,7 +225,7 @@ export function PartnerDetailSheet({
   };
 
   const isNew = partnerId === "new";
-  const title = isNew ? "파트너 추가" : (partner?.name ?? "상세");
+  const title = isNew ? "파트너사 추가" : (partner?.name ?? "상세");
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
