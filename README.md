@@ -31,9 +31,11 @@ DATABASE_URL="file:./dev.db"
 NEXTAUTH_SECRET="랜덤한 시크릿 키"
 NEXTAUTH_URL="http://localhost:3000"
 ALLOWED_EDITOR_EMAILS="editor@example.com,admin@example.com"
+DASHBOARD_PASSWORD=""
 ```
 
 - `ALLOWED_EDITOR_EMAILS`: 로그인 허용 이메일 목록 (쉼표 구분). 이 목록에 있는 이메일만 로그인 가능하며, 모두 **editor** 권한으로 로그인됩니다.
+- `DASHBOARD_PASSWORD`: **(선택)** 대시보드 접속용 비밀번호. 설정하면 `/dashboard` 및 하위 경로 접속 시 비밀번호 입력 화면이 먼저 나오며, 올바른 비밀번호 입력 후 접속하면 메인 대시보드로 이동합니다. 비우거나 설정하지 않으면 비밀번호 없이 접속 가능(로컬 개발용).
 
 ### 3. DB 마이그레이션 및 시드
 
@@ -61,6 +63,18 @@ npm run dev
 
 - **허가된 사람만 접근**: `ALLOWED_EDITOR_EMAILS`에 넣은 이메일만 로그인 가능. 배포 후 접속 URL을 해당 사용자에게만 공유하면 됩니다.
 - **상세 절차**: [DEPLOY.md](./DEPLOY.md) 참고 (Railway 권장, Vercel 옵션 포함).
+
+### Vercel에서 대시보드 비밀번호 설정
+
+배포된 대시보드 링크로 들어오는 **모든 사용자**가 비밀번호를 입력해야 접속하도록 하려면, Vercel에 환경 변수를 설정하면 됩니다.
+
+1. **Vercel 대시보드** → 해당 프로젝트 선택 → **Settings** → **Environment Variables**
+2. **Key**: `DASHBOARD_PASSWORD`
+3. **Value**: 사용할 비밀번호(원하는 문자열, 예: `MySecurePass123`)
+4. **Environment**: Production(필요 시 Preview/Development도 선택)
+5. **Save** 후 재배포(또는 다음 배포부터 적용)
+
+설정 후 `/dashboard` 또는 `/dashboard/...` 로 접속하면 먼저 비밀번호 입력 화면이 나오고, 설정한 비밀번호와 일치하면 대시보드 메인으로 이동합니다. 쿠키로 30일간 인증이 유지됩니다.
 
 ## 주요 기능
 
