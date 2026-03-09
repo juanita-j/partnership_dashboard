@@ -116,19 +116,25 @@ export function ExcelUploadDialog({ open, onClose, onApplied }: ExcelUploadDialo
           </div>
           {diff && (
             <>
-              <div className="rounded border p-3 max-h-60 overflow-y-auto space-y-2">
+              <div className="rounded border p-3 max-h-60 overflow-y-auto space-y-3">
                 <p className="text-sm font-medium">변경 예정: {diff.length}건</p>
                 {diff.slice(0, 20).map((item, i) => (
-                  <div key={i} className="text-sm border-b pb-1">
-                    <span className="font-medium">
+                  <div key={i} className="text-sm border-b border-border pb-2 last:border-0">
+                    <p className="font-medium text-foreground">
                       {item.action === "create" ? "신규" : "수정"}: {(item.partner?.name && item.partner.name !== "(이름없음)") ? item.partner.name : item.matchKey}
-                    </span>
-                    {item.changes?.length ? (
-                      <ul className="list-disc list-inside text-muted-foreground">
+                    </p>
+                    {item.action === "update" && item.changes?.length ? (
+                      <p className="mt-1 text-muted-foreground">
+                        <span className="font-medium text-foreground/80">수정 항목: </span>
                         {item.changes.map((c, j) => (
-                          <li key={j}>{c}</li>
+                          <span key={j}>
+                            {j > 0 && " · "}
+                            {c}
+                          </span>
                         ))}
-                      </ul>
+                      </p>
+                    ) : item.action === "create" ? (
+                      <p className="mt-1 text-muted-foreground">신규 생성 (회사/이름/휴대폰 등 엑셀 행 기준)</p>
                     ) : null}
                   </div>
                 ))}

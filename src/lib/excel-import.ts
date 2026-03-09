@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { normalizeCompany } from "./company";
+import { normalizeCompany, upperLatin } from "./company";
 
 /** 요구사항 고정 헤더 순서 (명함 등록일 다음에 히스토리) */
 export const EXCEL_HEADERS = [
@@ -191,7 +191,7 @@ export async function normalizeParsedRows(rows: ParsedRow[]): Promise<ParsedRow[
     const companyRaw = (row.company ?? "").trim() || "";
     if (companyRaw || row.email) {
       const { normalized } = await normalizeCompany(companyRaw, row.email ?? undefined);
-      n.companyNormalized = normalized || companyRaw;
+      n.companyNormalized = normalized || upperLatin(companyRaw);
     }
     out.push(n);
   }

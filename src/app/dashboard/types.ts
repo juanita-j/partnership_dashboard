@@ -48,7 +48,7 @@ export type OptionalColumnId = (typeof OPTIONAL_COLUMN_IDS)[number];
 export type DanAutoColumnId = (typeof DAN_AUTO_COLUMNS)[number];
 export type GiftAutoColumnId = (typeof GIFT_AUTO_COLUMNS)[number];
 
-export const EMPLOYMENT_STATUS_VALUES = ["퇴사", "재직", "내부이동"] as const;
+export const EMPLOYMENT_STATUS_VALUES = ["이직", "퇴사", "내부이동", "재직"] as const;
 export type EmploymentStatusValue = (typeof EMPLOYMENT_STATUS_VALUES)[number];
 
 /** FILTER용 DAN/선물 Y/N */

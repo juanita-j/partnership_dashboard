@@ -57,14 +57,16 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh, can
 
   return (
     <div className="rounded-lg border bg-card p-4 space-y-4">
-      <div className="font-medium text-sm text-muted-foreground">FILTER (행 조건)</div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 items-end">
-        <div>
+      <div className="font-medium text-sm rounded py-1.5 px-2 bg-gray-600 text-white">
+        FILTER (기본 정보)
+      </div>
+      <div className="grid grid-cols-4 sm:grid-cols-6 xl:grid-cols-8 gap-2 items-end rounded-md bg-gray-50/80 p-2">
+        <div className="min-w-0">
           <Label className="text-xs">재직상태</Label>
           <select
             value={filters.employmentStatus}
             onChange={(e) => onFiltersChange({ ...filters, employmentStatus: e.target.value })}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
+            className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm mt-0.5"
           >
             <option value="">전체</option>
             {EMPLOYMENT_STATUS_VALUES.map((v) => (
@@ -74,118 +76,126 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh, can
             ))}
           </select>
         </div>
-        <div>
+        <div className="min-w-0">
           <Label className="text-xs">이름</Label>
           <Input
-            placeholder="부분 검색"
+            placeholder="검색"
             value={filters.name}
             onChange={(e) => onFiltersChange({ ...filters, name: e.target.value })}
-            className="mt-1"
+            className="h-9 w-full px-2 py-1 text-sm mt-0.5"
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <Label className="text-xs">회사</Label>
           <Input
-            placeholder="부분 검색"
+            placeholder="검색"
             value={filters.company}
             onChange={(e) => onFiltersChange({ ...filters, company: e.target.value })}
-            className="mt-1"
+            className="h-9 w-full px-2 py-1 text-sm mt-0.5"
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <Label className="text-xs">부서</Label>
           <Input
-            placeholder="부분 검색"
+            placeholder="검색"
             value={filters.department}
             onChange={(e) => onFiltersChange({ ...filters, department: e.target.value })}
-            className="mt-1"
+            className="h-9 w-full px-2 py-1 text-sm mt-0.5"
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <Label className="text-xs">직함</Label>
           <Input
-            placeholder="부분 검색"
+            placeholder="검색"
             value={filters.title}
             onChange={(e) => onFiltersChange({ ...filters, title: e.target.value })}
-            className="mt-1"
+            className="h-9 w-full px-2 py-1 text-sm mt-0.5"
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <Label className="text-xs">초청인</Label>
           <Input
-            placeholder="부분 검색"
+            placeholder="검색"
             value={filters.inviter}
             onChange={(e) => onFiltersChange({ ...filters, inviter: e.target.value })}
-            className="mt-1"
+            className="h-9 w-full px-2 py-1 text-sm mt-0.5"
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <Label className="text-xs">선물발송인</Label>
           <Input
-            placeholder="부분 검색"
+            placeholder="검색"
             value={filters.giftSender}
             onChange={(e) => onFiltersChange({ ...filters, giftSender: e.target.value })}
-            className="mt-1"
+            className="h-9 w-full px-2 py-1 text-sm mt-0.5"
           />
         </div>
-        <div className="flex gap-2 items-end">
-          <Button variant="outline" size="sm" onClick={onRefresh}>
+        <div className="flex items-end pb-0.5">
+          <Button size="sm" onClick={onRefresh} className="h-7 px-2 text-xs">
             적용
           </Button>
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-2 border-t">
-        <div className="space-y-2">
-          <Label className="text-xs font-medium">DAN초청여부 (Y/N)</Label>
-          <div className="flex flex-wrap gap-3">
-            {eventYears.map((year) => {
-              const yy = year % 100;
-              const keyOn = `dan${yy}` as keyof FilterState;
-              const keyYn = `dan${yy}Yn` as keyof FilterState;
-              return (
-                <div key={year} className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground w-12">DAN{yy}</span>
-                  <select
-                    value={String(filters[keyYn] ?? "")}
-                    onChange={(e) => onFiltersChange({ ...filters, [keyYn]: e.target.value as "" | "Y" | "N" })}
-                    className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
-                  >
-                    <option value="">전체</option>
-                    <option value="Y">Y</option>
-                    <option value="N">N</option>
-                  </select>
-                </div>
-              );
-            })}
-          </div>
+      <div className="border-t pt-4 mt-2">
+        <div className="font-medium text-sm mb-2 rounded py-1.5 px-2 bg-gray-600 text-white">
+          FILTER (DAN/연말선물)
         </div>
-        <div className="space-y-2">
-          <Label className="text-xs font-medium">선물발송여부 (Y/N)</Label>
-          <div className="flex flex-wrap gap-3">
-            {eventYears.map((year) => {
-              const yy = year % 100;
-              const keyYn = `gift${yy}Yn` as keyof FilterState;
-              return (
-                <div key={year} className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground w-10">{yy}년</span>
-                  <select
-                    value={String(filters[keyYn] ?? "")}
-                    onChange={(e) => onFiltersChange({ ...filters, [keyYn]: e.target.value as "" | "Y" | "N" })}
-                    className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
-                  >
-                    <option value="">전체</option>
-                    <option value="Y">Y</option>
-                    <option value="N">N</option>
-                  </select>
-                </div>
-              );
-            })}
+        <div className="rounded-md border border-gray-200 bg-gray-50/80 p-3">
+          <div className="flex flex-wrap items-end gap-x-6 gap-y-2">
+            <div className="flex items-center gap-2 flex-nowrap">
+              <Label className="text-xs font-medium shrink-0">DAN초청여부 (Y/N)</Label>
+              <div className="flex items-center gap-2 flex-nowrap">
+                {eventYears.map((year) => {
+                  const yy = year % 100;
+                  const keyYn = `dan${yy}Yn` as keyof FilterState;
+                  return (
+                    <div key={year} className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-xs text-muted-foreground">DAN{yy}</span>
+                      <select
+                        value={String(filters[keyYn] ?? "")}
+                        onChange={(e) => onFiltersChange({ ...filters, [keyYn]: e.target.value as "" | "Y" | "N" })}
+                        className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
+                      >
+                        <option value="">전체</option>
+                        <option value="Y">Y</option>
+                        <option value="N">N</option>
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-nowrap">
+              <Label className="text-xs font-medium shrink-0">선물발송여부 (Y/N)</Label>
+              <div className="flex items-center gap-2 flex-nowrap">
+                {eventYears.map((year) => {
+                  const yy = year % 100;
+                  const keyYn = `gift${yy}Yn` as keyof FilterState;
+                  return (
+                    <div key={year} className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-xs text-muted-foreground">{yy}년</span>
+                      <select
+                        value={String(filters[keyYn] ?? "")}
+                        onChange={(e) => onFiltersChange({ ...filters, [keyYn]: e.target.value as "" | "Y" | "N" })}
+                        className="h-9 rounded-md border border-input bg-background px-2 text-sm w-16"
+                      >
+                        <option value="">전체</option>
+                        <option value="Y">Y</option>
+                        <option value="N">N</option>
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="font-medium text-sm text-muted-foreground mt-4">SHOW (추가 컬럼)</div>
-      <div className="flex flex-wrap gap-2">
+      <div className="font-medium text-sm mt-4 rounded py-1.5 px-2 bg-gray-300 text-gray-900">
+        SHOW
+      </div>
+      <div className="flex flex-wrap gap-2 rounded-md bg-gray-50/80 p-2">
         {OPTIONAL_COLUMN_IDS.map((id) => (
           <label key={id} className="flex items-center gap-1.5 cursor-pointer text-sm">
             <input
@@ -231,7 +241,6 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh, can
               className="w-40"
             />
             <Button
-              variant="outline"
               size="sm"
               disabled={!saveName.trim() || saving}
               onClick={async () => {

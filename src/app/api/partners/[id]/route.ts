@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { stripCompanySuffix, upperLatin, normalizeCompany } from "@/lib/company";
 import { partnerUpdateSchema, EMPLOYMENT_STATUS_ENUM } from "@/lib/validations";
 
 const YEARS = [2023, 2024, 2025];
@@ -53,7 +54,15 @@ export async function GET(
     if (!partner) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    return NextResponse.json({ ...partner, eventsByYear: toEventsByYear(partner.yearlyEvents) });
+    const { normalized } = await normalizeCompany(
+      (partner.companyNormalized ?? "").trim(),
+      partner.email ?? undefined
+    );
+    return NextResponse.json({
+      ...partner,
+      companyNormalized: normalized || (partner.companyNormalized ?? ""),
+      eventsByYear: toEventsByYear(partner.yearlyEvents),
+    });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
@@ -81,13 +90,14 @@ export async function PATCH(
     if (d.history !== undefined) updatePayload.history = d.history;
     if (d.name !== undefined) updatePayload.name = d.name;
     if (d.phone !== undefined) updatePayload.phone = d.phone;
-    if (d.companyNormalized !== undefined) updatePayload.companyNormalized = d.companyNormalized;
+    if (d.companyNormalized !== undefined) updatePayload.companyNormalized = upperLatin(stripCompanySuffix(d.companyNormalized));
     if (d.department !== undefined) updatePayload.department = d.department;
     if (d.title !== undefined) updatePayload.title = d.title;
     if (d.email !== undefined) updatePayload.email = d.email;
     if (d.workPhone !== undefined) updatePayload.workPhone = d.workPhone;
     if (d.workFax !== undefined) updatePayload.workFax = d.workFax;
     if (d.address !== undefined) updatePayload.address = d.address;
+    if (d.hq !== undefined) updatePayload.hq = d.hq;
     if (d.businessCardDateRaw !== undefined) updatePayload.businessCardDateRaw = d.businessCardDateRaw;
     if (Object.keys(updatePayload).length === 0) {
       const partner = await prisma.partner.findUnique({ where: { id }, include: { yearlyEvents: true } });
@@ -122,13 +132,14 @@ export async function PUT(
     if (d.status !== undefined) updatePayload.status = d.status;
     if (d.name !== undefined) updatePayload.name = d.name;
     if (d.phone !== undefined) updatePayload.phone = d.phone;
-    if (d.companyNormalized !== undefined) updatePayload.companyNormalized = d.companyNormalized;
+    if (d.companyNormalized !== undefined) updatePayload.companyNormalized = upperLatin(stripCompanySuffix(d.companyNormalized));
     if (d.department !== undefined) updatePayload.department = d.department;
     if (d.title !== undefined) updatePayload.title = d.title;
     if (d.email !== undefined) updatePayload.email = d.email;
     if (d.workPhone !== undefined) updatePayload.workPhone = d.workPhone;
     if (d.workFax !== undefined) updatePayload.workFax = d.workFax;
     if (d.address !== undefined) updatePayload.address = d.address;
+    if (d.hq !== undefined) updatePayload.hq = d.hq;
     if (d.businessCardDateRaw !== undefined) updatePayload.businessCardDateRaw = d.businessCardDateRaw;
     if (d.employmentStatus !== undefined) updatePayload.employmentStatus = d.employmentStatus;
     if (d.employmentUpdatedAtRaw !== undefined) updatePayload.employmentUpdatedAtRaw = d.employmentUpdatedAtRaw;

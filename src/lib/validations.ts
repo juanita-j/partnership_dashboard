@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const EMPLOYMENT_STATUS_ENUM = z.enum(["퇴사", "재직", "내부이동"]);
+export const EMPLOYMENT_STATUS_ENUM = z.enum(["이직", "퇴사", "내부이동", "재직"]);
 
 export const partnerCreateSchema = z.object({
   status: z.string().optional().default("active"),
@@ -13,6 +13,7 @@ export const partnerCreateSchema = z.object({
   workPhone: z.string().optional().default(""),
   workFax: z.string().optional().default(""),
   address: z.string().optional().default(""),
+  hq: z.string().optional().default(""),
   businessCardDate: z.string().optional(),
   businessCardDateRaw: z.string().optional(),
   employmentStatus: z.string().optional().default("재직"),

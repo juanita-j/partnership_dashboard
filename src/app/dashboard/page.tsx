@@ -109,8 +109,15 @@ function DashboardContent() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">파트너사 목록</h1>
+        <h1 className="text-base font-bold">파트너사 목록</h1>
         <div className="flex gap-2">
+          {editor && (
+            <a href="/api/template" download="partner_template.xlsx">
+              <Button variant="outline" size="sm" type="button">
+                템플릿 다운로드
+              </Button>
+            </a>
+          )}
           <a
             href={exportUrl}
             download
@@ -125,11 +132,6 @@ function DashboardContent() {
           </a>
           {editor && (
             <>
-              <a href="/api/template" download="partner_template.xlsx">
-                <Button variant="outline" size="sm" type="button">
-                  템플릿 다운로드
-                </Button>
-              </a>
               <Button variant="outline" size="sm" onClick={() => setExcelOpen(true)}>
                 <Upload className="h-4 w-4 mr-2" />
                 엑셀 업로드

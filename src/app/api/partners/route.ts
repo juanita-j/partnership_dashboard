@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { stripCompanySuffix, upperLatin, normalizeCompany } from "@/lib/company";
 import { partnerCreateSchema } from "@/lib/validations";
 import type { Prisma } from "@prisma/client";
 
@@ -52,6 +53,25 @@ export async function GET(req: NextRequest) {
     const title = (searchParams.get("title") ?? "").trim();
     const inviter = (searchParams.get("inviter") ?? "").trim();
     const giftSender = (searchParams.get("giftSender") ?? "").trim();
+    const sortBy = (searchParams.get("sortBy") ?? "").trim() || "updatedAt";
+    const sortOrder = (searchParams.get("sortOrder") ?? "desc").toLowerCase() === "asc" ? "asc" : "desc";
+
+    const ALLOWED_SORT_FIELDS = [
+      "employmentStatus",
+      "companyNormalized",
+      "name",
+      "phone",
+      "department",
+      "title",
+      "email",
+      "address",
+      "businessCardDateRaw",
+      "history",
+      "updatedAt",
+    ] as const;
+    const orderByField = ALLOWED_SORT_FIELDS.includes(sortBy as (typeof ALLOWED_SORT_FIELDS)[number])
+      ? sortBy
+      : "updatedAt";
 
     const eventConditions: Record<string, unknown>[] = [];
     for (let year = YEAR_RANGE.min; year <= YEAR_RANGE.max; year++) {
@@ -73,7 +93,7 @@ export async function GET(req: NextRequest) {
     const where: Record<string, unknown> = {};
     if (employmentStatus) where.employmentStatus = employmentStatus;
     if (name) where.name = { contains: name };
-    if (company) where.companyNormalized = { contains: company };
+    if (company) where.companyNormalized = { contains: company, mode: "insensitive" };
     if (department) where.department = { contains: department };
     if (title) where.title = { contains: title };
 
@@ -88,17 +108,26 @@ export async function GET(req: NextRequest) {
       prisma.partner.findMany({
         where: where as Prisma.PartnerWhereInput,
         include: { yearlyEvents: true },
-        orderBy: { updatedAt: "desc" },
+        orderBy: { [orderByField]: sortOrder },
         skip: (page - 1) * limit,
         take: limit,
       }),
       prisma.partner.count({ where: where as Prisma.PartnerWhereInput }),
     ]);
 
-    const data = partners.map((p) => ({
-      ...p,
-      eventsByYear: toEventsByYear(p.yearlyEvents),
-    }));
+    const data = await Promise.all(
+      partners.map(async (p) => {
+        const { normalized } = await normalizeCompany(
+          (p.companyNormalized ?? "").trim(),
+          p.email ?? undefined
+        );
+        return {
+          ...p,
+          companyNormalized: normalized || (p.companyNormalized ?? ""),
+          eventsByYear: toEventsByYear(p.yearlyEvents),
+        };
+      })
+    );
 
     return NextResponse.json({
       data,
@@ -123,13 +152,14 @@ export async function POST(req: NextRequest) {
         status: d.status ?? "active",
         name: d.name,
         phone: d.phone ?? "",
-        companyNormalized: d.companyNormalized ?? "",
+        companyNormalized: upperLatin(stripCompanySuffix(d.companyNormalized ?? "")),
         department: d.department ?? "",
         title: d.title ?? "",
         email: d.email ?? "",
         workPhone: d.workPhone ?? "",
         workFax: d.workFax ?? "",
         address: d.address ?? "",
+        hq: d.hq ?? "",
         businessCardDateRaw: d.businessCardDateRaw ?? d.businessCardDate ?? null,
         employmentStatus: d.employmentStatus ?? "재직",
         employmentUpdatedAtRaw: d.employmentUpdatedAtRaw ?? d.employmentUpdatedAt ?? null,

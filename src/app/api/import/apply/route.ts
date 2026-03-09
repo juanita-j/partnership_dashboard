@@ -30,9 +30,7 @@ export async function POST(req: NextRequest) {
             address: (p.address ?? "").trim() || null,
             businessCardDateRaw: (p.businessCardDateRaw ?? "").trim() || null,
             employmentStatus: "재직",
-            history: (p.history ?? "").trim()
-              ? `${(p.history ?? "").trim()}\n${now} ExcelImport: 신규 생성`
-              : `${now} ExcelImport: 신규 생성`,
+            history: (p.history ?? "").trim(),
           },
         });
         created++;
@@ -96,7 +94,9 @@ export async function POST(req: NextRequest) {
         if (p.workFax !== undefined) updates.workFax = (p.workFax ?? "").trim() || null;
         if (p.address !== undefined) updates.address = (p.address ?? "").trim() || null;
         if (p.businessCardDateRaw !== undefined) updates.businessCardDateRaw = (p.businessCardDateRaw ?? "").trim() || null;
-        if (historyParts.length > 0) {
+        // 엑셀의 '히스토리' 셀이 비어 있으면 ExcelImport 문구를 넣지 않음 (해당 셀에 내용이 있을 때만 append)
+        const excelHistory = (p.history ?? "").trim();
+        if (historyParts.length > 0 && excelHistory !== "") {
           updates.history = (existing.history ?? "") + "\n" + `${now} ExcelImport: ` + historyParts.join("; ");
         }
         if (Object.keys(updates).length > 0) {

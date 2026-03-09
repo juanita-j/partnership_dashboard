@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { EMPLOYMENT_STATUS_VALUES } from "@/app/dashboard/types";
 
 type PartnerDetail = {
   id: string;
@@ -23,6 +24,7 @@ type PartnerDetail = {
   title: string | null;
   email: string | null;
   address: string | null;
+  hq: string | null;
   businessCardDateRaw: string | null;
   employmentStatus: string;
   employmentUpdatedAtRaw: string | null;
@@ -32,7 +34,7 @@ type PartnerDetail = {
     {
       danInvitedRaw?: string;
       danInviter?: string;
-      giftSentRaw?: string;
+      giftRecipient?: string;
       giftItem?: string;
       giftQtyRaw?: string;
       giftSender?: string;
@@ -77,9 +79,9 @@ export function PartnerDetailSheet({
         title: "",
         email: "",
         address: "",
+        hq: "",
         businessCardDateRaw: "",
         employmentStatus: "재직",
-        employmentUpdatedAtRaw: "",
         history: "",
       });
       setEvents(
@@ -89,7 +91,7 @@ export function PartnerDetailSheet({
             {
               danInvitedRaw: "",
               danInviter: "",
-              giftSentRaw: "",
+              giftRecipient: "",
               giftItem: "",
               giftQtyRaw: "",
               giftSender: "",
@@ -113,6 +115,7 @@ export function PartnerDetailSheet({
           title: data.title ?? "",
           email: data.email ?? "",
           address: data.address ?? "",
+          hq: data.hq ?? "",
           businessCardDateRaw: data.businessCardDateRaw ?? "",
           employmentStatus: data.employmentStatus ?? "재직",
           employmentUpdatedAtRaw: data.employmentUpdatedAtRaw ?? "",
@@ -125,7 +128,7 @@ export function PartnerDetailSheet({
           evMap[y] = {
             danInvitedRaw: ev?.danInvitedRaw ?? "",
             danInviter: ev?.danInviter ?? "",
-            giftSentRaw: ev?.giftSentRaw ?? "",
+            giftRecipient: ev?.giftRecipient ?? "",
             giftItem: ev?.giftItem ?? "",
             giftQtyRaw: ev?.giftQtyRaw ?? "",
             giftSender: ev?.giftSender ?? "",
@@ -158,7 +161,7 @@ export function PartnerDetailSheet({
               year: y,
               danInvitedRaw: ev?.danInvitedRaw ?? "",
               danInviter: ev?.danInviter ?? "",
-              giftSentRaw: ev?.giftSentRaw ?? "",
+              giftRecipient: ev?.giftRecipient ?? "",
               giftItem: ev?.giftItem ?? "",
               giftQtyRaw: ev?.giftQtyRaw ?? "",
               giftSender: ev?.giftSender ?? "",
@@ -186,7 +189,7 @@ export function PartnerDetailSheet({
               year: y,
               danInvitedRaw: ev?.danInvitedRaw ?? "",
               danInviter: ev?.danInviter ?? "",
-              giftSentRaw: ev?.giftSentRaw ?? "",
+              giftRecipient: ev?.giftRecipient ?? "",
               giftItem: ev?.giftItem ?? "",
               giftQtyRaw: ev?.giftQtyRaw ?? "",
               giftSender: ev?.giftSender ?? "",
@@ -234,15 +237,6 @@ export function PartnerDetailSheet({
           <div className="py-8 text-center">로딩 중...</div>
         ) : (
           <div className="space-y-6 py-4">
-            <div className="grid gap-2">
-              <Label>상태 (자유 입력)</Label>
-              <Input
-                value={String(form.status ?? "")}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                placeholder="active / non_active"
-                disabled={!canEdit}
-              />
-            </div>
             <div className="grid gap-2">
               <Label>이름 *</Label>
               <Input
@@ -300,27 +294,33 @@ export function PartnerDetailSheet({
               />
             </div>
             <div className="grid gap-2">
-              <Label>재직상태 (자유 입력)</Label>
+              <Label>HQ (본사 지역)</Label>
               <Input
-                value={String(form.employmentStatus ?? "")}
-                onChange={(e) => setForm({ ...form, employmentStatus: e.target.value })}
-                placeholder="재직 / 휴직 / 퇴직 / N/A"
+                value={String(form.hq ?? "")}
+                onChange={(e) => setForm({ ...form, hq: e.target.value })}
+                placeholder="예: US, KR"
                 disabled={!canEdit}
               />
             </div>
             <div className="grid gap-2">
-              <Label>명함 등록일 (원문)</Label>
+              <Label>재직상태</Label>
+              <select
+                value={String(form.employmentStatus ?? "재직")}
+                onChange={(e) => setForm({ ...form, employmentStatus: e.target.value })}
+                disabled={!canEdit}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                {EMPLOYMENT_STATUS_VALUES.map((v) => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <Label>명함 등록일(yyyy-mm-dd)</Label>
               <Input
                 value={String(form.businessCardDateRaw ?? "")}
                 onChange={(e) => setForm({ ...form, businessCardDateRaw: e.target.value })}
-                disabled={!canEdit}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>재직상태 업데이트일자 (원문)</Label>
-              <Input
-                value={String(form.employmentUpdatedAtRaw ?? "")}
-                onChange={(e) => setForm({ ...form, employmentUpdatedAtRaw: e.target.value })}
+                placeholder="yyyy-mm-dd"
                 disabled={!canEdit}
               />
             </div>
@@ -342,8 +342,8 @@ export function PartnerDetailSheet({
                 <div key={y} className="border rounded p-3 mb-2 space-y-2">
                   <span className="font-medium">{y}년</span>
                   <div className="grid grid-cols-2 gap-2">
-                    <Label>초청여부(원문)</Label>
-                    <Input
+                    <Label>초청여부</Label>
+                    <select
                       value={String(events[y]?.danInvitedRaw ?? "")}
                       onChange={(e) =>
                         setEvents({
@@ -351,9 +351,13 @@ export function PartnerDetailSheet({
                           [y]: { ...events[y], danInvitedRaw: e.target.value },
                         })
                       }
-                      placeholder="O, X, N/A 등"
                       disabled={!canEdit}
-                    />
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">-</option>
+                      <option value="Y">Y</option>
+                      <option value="N">N</option>
+                    </select>
                     <Label>초청인</Label>
                     <Input
                       value={String(events[y]?.danInviter ?? "")}
@@ -365,18 +369,22 @@ export function PartnerDetailSheet({
                       }
                       disabled={!canEdit}
                     />
-                    <Label>선물 발송여부(원문)</Label>
-                    <Input
-                      value={String(events[y]?.giftSentRaw ?? "")}
+                    <Label>선물 발송여부</Label>
+                    <select
+                      value={String(events[y]?.giftRecipient ?? "")}
                       onChange={(e) =>
                         setEvents({
                           ...events,
-                          [y]: { ...events[y], giftSentRaw: e.target.value },
+                          [y]: { ...events[y], giftRecipient: e.target.value },
                         })
                       }
-                      placeholder="O, X, N/A 등"
                       disabled={!canEdit}
-                    />
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">-</option>
+                      <option value="Y">Y</option>
+                      <option value="N">N</option>
+                    </select>
                     <Label>품목</Label>
                     <Input
                       value={String(events[y]?.giftItem ?? "")}
@@ -388,7 +396,7 @@ export function PartnerDetailSheet({
                       }
                       disabled={!canEdit}
                     />
-                    <Label>발송 개수(원문)</Label>
+                    <Label>발송 개수</Label>
                     <Input
                       value={String(events[y]?.giftQtyRaw ?? "")}
                       onChange={(e) =>
@@ -397,7 +405,7 @@ export function PartnerDetailSheet({
                           [y]: { ...events[y], giftQtyRaw: e.target.value },
                         })
                       }
-                      placeholder="1, N/A 등"
+                      placeholder="ex. 1, 2, 3(숫자만 작성)"
                       disabled={!canEdit}
                     />
                     <Label>발송인</Label>

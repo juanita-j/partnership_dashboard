@@ -3,6 +3,29 @@ import { prisma } from "@/lib/prisma";
 
 const FUZZY_THRESHOLD = 0.6;
 
+/** 영문 알파벳이 포함된 경우 소문자를 대문자로 통일 (회사명 저장/표시용) */
+export function upperLatin(name: string): string {
+  if (!name || typeof name !== "string") return name;
+  return name.replace(/[a-z]/g, (ch) => ch.toUpperCase());
+}
+
+/** 회사명 맨 끝의 법인 표기 제거: (주), 주식회사, Corp, Inc, PLC, LLC, Co., LTD 등 */
+export function stripCompanySuffix(name: string): string {
+  if (!name || typeof name !== "string") return name;
+  let t = name.trim();
+  // 한글: (주), 주식회사
+  const koreanSuffixRe = /\s*(\(\s*주\s*\)|주식회사)\s*$/;
+  while (koreanSuffixRe.test(t)) {
+    t = t.replace(koreanSuffixRe, "").trim();
+  }
+  // 영문: Corp, Inc, PLC, LLC, Co., LTD 등
+  const suffixRe = /\s*,?\s*(Corp\.?|Inc\.?|PLC|L\.?L\.?C\.?|LLC|Co\.|LTD\.?|Ltd\.?)\s*$/i;
+  while (suffixRe.test(t)) {
+    t = t.replace(suffixRe, "").trim();
+  }
+  return t;
+}
+
 function normalizeRaw(raw: string): string {
   return raw
     .replace(/\s+/g, " ")
@@ -39,7 +62,6 @@ export function pickCanonicalCompanyName(names: string[], emailDomain?: string |
   if (list.length === 1) return list[0];
 
   const hasKorean = list.some(hasHangul);
-  const koreanDomain = emailDomain ? isKoreanDomain(emailDomain) : false;
 
   const withoutKorea = list.map((name) => {
     const lower = name.toLowerCase();
@@ -77,12 +99,9 @@ export function pickCanonicalCompanyName(names: string[], emailDomain?: string |
 
   const koreanOnly = candidates.filter(hasHangul);
   const englishOnly = candidates.filter((n) => !hasHangul(n));
+  // 영어·한국어 둘 다 있으면 항상 한국어 회사명으로 통일
   if (koreanOnly.length > 0 && englishOnly.length > 0) {
-    if (koreanDomain) {
-      candidates = koreanOnly;
-    } else {
-      candidates = englishOnly;
-    }
+    candidates = koreanOnly;
   }
 
   return candidates[0] ?? list[0];
@@ -130,44 +149,27 @@ export async function normalizeCompany(
   if (!rawName || typeof rawName !== "string") {
     return { normalized: "", needsMapping: false };
   }
-  const cleaned = rawName.trim();
+  const cleaned = stripCompanySuffix(rawName.trim());
   const key = normalizeRaw(cleaned);
   if (!key) {
     if (email) {
       const domain = getEmailDomain(email);
       if (domain) {
         const canonical = await getCanonicalCompanyForDomain(domain, cleaned);
-        if (canonical) return { normalized: canonical, needsMapping: false };
+        if (canonical) return { normalized: upperLatin(canonical), needsMapping: false };
       }
     }
-    return { normalized: cleaned, needsMapping: false };
+    return { normalized: upperLatin(cleaned), needsMapping: false };
   }
 
   const aliases = await getAliases();
   const exact = aliases.find(
     (a) => normalizeRaw(a.alias) === key || a.alias.trim().toLowerCase() === cleaned.toLowerCase()
   );
-  let normalized = exact ? exact.normalizedName : cleaned;
-  if (!exact) {
-    const fuse = new Fuse(aliases, {
-      keys: ["alias"],
-      threshold: 1 - FUZZY_THRESHOLD,
-    });
-    const searched = fuse.search(cleaned);
-    if (searched.length > 0 && searched[0].score != null && searched[0].score < 1 - FUZZY_THRESHOLD) {
-      normalized = searched[0].item.normalizedName;
-    }
-  }
+  // 회사명 매핑 리스트에 있는 경우에만 표준명으로 변환. 없으면 엑셀/입력값 그대로 사용
+  const normalized = exact ? exact.normalizedName : cleaned;
 
-  if (email) {
-    const domain = getEmailDomain(email);
-    if (domain) {
-      const canonical = await getCanonicalCompanyForDomain(domain, normalized);
-      if (canonical) normalized = canonical;
-    }
-  }
-
-  return { normalized, needsMapping: !exact };
+  return { normalized: upperLatin(normalized), needsMapping: !exact };
 }
 
 export function invalidateCompanyAliasCache() {

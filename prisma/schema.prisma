@@ -69,6 +69,7 @@ model Partner {
   workPhone              String?       @default("")
   workFax                String?       @default("")
   address                String?       @default("")
+  hq                     String?       @default("")
   businessCardDate       DateTime?
   businessCardDateRaw    String?
   employmentStatus       String        @default("재직")

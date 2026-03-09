@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
+import { Nanum_Gothic } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
+
+const nanumGothic = Nanum_Gothic({
+  weight: ["400", "700", "800"],
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "파트너사 정보 DB 관리 대시보드",
@@ -15,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body className="antialiased font-sans">
+      <body className={`antialiased ${nanumGothic.className}`}>
         <Providers>
           {children}
           <Toaster richColors position="top-center" />

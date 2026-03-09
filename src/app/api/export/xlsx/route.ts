@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizeCompany } from "@/lib/company";
 import type { Prisma } from "@prisma/client";
 import * as XLSX from "xlsx";
 
@@ -73,6 +74,7 @@ const FIXED_COLUMNS: { key: string; label: string }[] = [
 const OPTIONAL_COLUMNS: { key: string; label: string }[] = [
   { key: "businessCardDate", label: "명함 등록일" },
   { key: "history", label: "히스토리" },
+  { key: "hq", label: "HQ" },
 ];
 
 
@@ -86,6 +88,7 @@ function getCellValue(
     title: string | null;
     email: string | null;
     address: string | null;
+    hq: string | null;
     businessCardDateRaw: string | null;
     history: string | null;
     eventsByYear: Record<
@@ -119,6 +122,8 @@ function getCellValue(
       return p.email ?? "";
     case "address":
       return p.address ?? "";
+    case "hq":
+      return p.hq ?? "";
     case "businessCardDate":
       return p.businessCardDateRaw ?? "";
     case "history":
@@ -205,7 +210,7 @@ export async function GET(req: NextRequest) {
     } else {
       if (employmentStatus) where.employmentStatus = employmentStatus;
       if (name) where.name = { contains: name };
-      if (company) where.companyNormalized = { contains: company };
+      if (company) where.companyNormalized = { contains: company, mode: "insensitive" };
       if (department) where.department = { contains: department };
       if (title) where.title = { contains: title };
       const eventConditions: Record<string, unknown>[] = [];
@@ -236,12 +241,21 @@ export async function GET(req: NextRequest) {
       orderBy: { updatedAt: "desc" },
     });
 
-    const rows = partners.map((p) => ({
-      ...p,
-      eventsByYear: toEventsByYear(
-        p.yearlyEvents as { year: number; danInvitedRaw: string | null; danInviter: string | null; giftRecipient?: string | null; giftItem: string | null; giftQtyRaw: string | null; giftSender: string | null }[]
-      ),
-    }));
+    const rows = await Promise.all(
+      partners.map(async (p) => {
+        const { normalized } = await normalizeCompany(
+          (p.companyNormalized ?? "").trim(),
+          p.email ?? undefined
+        );
+        return {
+          ...p,
+          companyNormalized: normalized || (p.companyNormalized ?? ""),
+          eventsByYear: toEventsByYear(
+            p.yearlyEvents as { year: number; danInvitedRaw: string | null; danInviter: string | null; giftRecipient?: string | null; giftItem: string | null; giftQtyRaw: string | null; giftSender: string | null }[]
+          ),
+        };
+      })
+    );
 
     const columns: { key: string; label: string }[] = [...FIXED_COLUMNS];
     if (showColumns.includes("businessCardDate")) columns.push(OPTIONAL_COLUMNS[0]);

@@ -13,11 +13,8 @@ export default function DashboardLayout({
             파트너사 DB 대시보드
           </Link>
           <nav className="flex gap-4">
-            <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
-              파트너 목록
-            </Link>
             <Link href="/dashboard/company-alias" className="text-sm text-muted-foreground hover:text-foreground">
-              회사명 매핑
+              회사명 매핑 조건
             </Link>
           </nav>
         </div>

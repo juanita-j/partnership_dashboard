@@ -39,59 +39,93 @@ async function buildMergeDiff(rows: ParsedRow[]): Promise<MergeDiff> {
     const phone = (row.phone ?? "").trim();
     const company = (row.companyNormalized ?? row.company ?? "").trim();
     if (!name && !email && !company) continue;
-    let existing = null;
+
+    // 신규 vs 수정 판단: 고유값 = '이름' + '휴대폰'. 둘 다 일치할 때만 수정으로 간주 (이메일·회사는 매칭에 사용하지 않음)
+    let existing: (typeof partners)[number] | null = null;
     let matchKey = "";
     if (name && phone) {
       existing = partners.find(
-        (p) =>
-          p.name.trim() === name &&
-          (p.phone ?? "").trim() === phone
-      );
-      matchKey = `name+phone:${name}|${phone}`;
+        (p) => p.name.trim() === name && (p.phone ?? "").trim() === phone
+      ) ?? null;
+      matchKey = `이름+휴대폰:${name}|${phone}`;
     }
     const changes: string[] = [];
     if (existing) {
       const p = existing;
-      if (row.name != null && row.name !== p.name) changes.push(`이름 변경`);
-      if (row.phone !== undefined && (row.phone ?? "") !== (p.phone ?? "")) changes.push(`휴대폰 변경`);
-      if (row.companyNormalized != null && (row.companyNormalized ?? "") !== (p.companyNormalized ?? "")) {
-        changes.push(`회사: ${p.companyNormalized} -> ${row.companyNormalized}`);
+      const empty = (s: string | null | undefined) => (s ?? "").trim() || "(비움)";
+      if (row.name != null && row.name !== p.name) changes.push(`이름 (${empty(p.name)} → ${empty(row.name)})`);
+      if (row.phone !== undefined && (row.phone ?? "").trim() !== (p.phone ?? "").trim()) changes.push(`휴대폰 (${empty(p.phone)} → ${empty(row.phone)})`);
+      if (row.companyNormalized != null && (row.companyNormalized ?? "").trim() !== (p.companyNormalized ?? "").trim()) {
+        changes.push(`회사 (${empty(p.companyNormalized)} → ${empty(row.companyNormalized)})`);
       }
-      if (row.department !== undefined && (row.department ?? "") !== (p.department ?? "")) {
-        changes.push(`부서 ${p.department ?? ""} -> ${row.department ?? ""}`);
+      if (row.department !== undefined && (row.department ?? "").trim() !== (p.department ?? "").trim()) {
+        changes.push(`부서 (${empty(p.department)} → ${empty(row.department)})`);
       }
-      if (row.title !== undefined && (row.title ?? "") !== (p.title ?? "")) changes.push(`직함 변경`);
-      if (row.workPhone !== undefined && (row.workPhone ?? "") !== ((p as { workPhone?: string }).workPhone ?? "")) changes.push(`근무처 전화 변경`);
-      if (row.workFax !== undefined && (row.workFax ?? "") !== ((p as { workFax?: string }).workFax ?? "")) changes.push(`근무처 팩스 변경`);
-      if (row.address !== undefined && (row.address ?? "") !== (p.address ?? "")) changes.push(`근무지 주소 변경`);
-      if (row.businessCardDateRaw !== undefined && (row.businessCardDateRaw ?? "") !== (p.businessCardDateRaw ?? "")) changes.push(`명함 등록일 변경`);
+      if (row.title !== undefined && (row.title ?? "").trim() !== (p.title ?? "").trim()) {
+        changes.push(`직함 (${empty(p.title)} → ${empty(row.title)})`);
+      }
+      if (row.email !== undefined && (row.email ?? "").trim() !== (p.email ?? "").trim()) {
+        changes.push(`전자 메일 (${empty(p.email)} → ${empty(row.email)})`);
+      }
+      const workPhone = (p as { workPhone?: string }).workPhone;
+      if (row.workPhone !== undefined && (row.workPhone ?? "").trim() !== (workPhone ?? "").trim()) {
+        changes.push(`근무처 전화 (${empty(workPhone)} → ${empty(row.workPhone)})`);
+      }
+      const workFax = (p as { workFax?: string }).workFax;
+      if (row.workFax !== undefined && (row.workFax ?? "").trim() !== (workFax ?? "").trim()) {
+        changes.push(`근무처 팩스 (${empty(workFax)} → ${empty(row.workFax)})`);
+      }
+      if (row.address !== undefined && (row.address ?? "").trim() !== (p.address ?? "").trim()) {
+        changes.push(`근무지 주소 (${empty(p.address)} → ${empty(row.address)})`);
+      }
+      if (row.businessCardDateRaw !== undefined && (row.businessCardDateRaw ?? "").trim() !== (p.businessCardDateRaw ?? "").trim()) {
+        changes.push(`명함 등록일 (${empty(p.businessCardDateRaw)} → ${empty(row.businessCardDateRaw)})`);
+      }
       if (row.years) {
         for (const [y, ev] of Object.entries(row.years)) {
           const year = parseInt(y, 10);
           const existingEv = p.yearlyEvents?.find((e) => e.year === year);
-          if (ev.danInvitedRaw !== undefined && (ev.danInvitedRaw ?? "") !== (existingEv?.danInvitedRaw ?? "")) changes.push(`${year} DAN초청 변경`);
-          if (ev.giftRecipient !== undefined && (ev.giftRecipient ?? "") !== (existingEv?.giftRecipient ?? "")) changes.push(`${year} 선물수신인 변경`);
-          if (ev.giftItem !== undefined && (ev.giftItem ?? "") !== (existingEv?.giftItem ?? "")) changes.push(`${year} 품목 변경`);
+          if (ev.danInvitedRaw !== undefined && (ev.danInvitedRaw ?? "") !== (existingEv?.danInvitedRaw ?? "")) {
+            changes.push(`${year}년 DAN초청 (${empty(existingEv?.danInvitedRaw)} → ${empty(ev.danInvitedRaw)})`);
+          }
+          if (ev.danInviter !== undefined && (ev.danInviter ?? "") !== (existingEv?.danInviter ?? "")) {
+            changes.push(`${year}년 DAN초청인 (${empty(existingEv?.danInviter)} → ${empty(ev.danInviter)})`);
+          }
+          if (ev.giftRecipient !== undefined && (ev.giftRecipient ?? "") !== (existingEv?.giftRecipient ?? "")) {
+            changes.push(`${year}년 선물수신 (${empty(existingEv?.giftRecipient)} → ${empty(ev.giftRecipient)})`);
+          }
+          if (ev.giftItem !== undefined && (ev.giftItem ?? "") !== (existingEv?.giftItem ?? "")) {
+            changes.push(`${year}년 선물품목 (${empty(existingEv?.giftItem)} → ${empty(ev.giftItem)})`);
+          }
+          if (ev.giftQtyRaw !== undefined && (ev.giftQtyRaw ?? "") !== (existingEv?.giftQtyRaw ?? "")) {
+            changes.push(`${year}년 선물발송개수 (${empty(existingEv?.giftQtyRaw)} → ${empty(ev.giftQtyRaw)})`);
+          }
+          if (ev.giftSender !== undefined && (ev.giftSender ?? "") !== (existingEv?.giftSender ?? "")) {
+            changes.push(`${year}년 선물발송인 (${empty(existingEv?.giftSender)} → ${empty(ev.giftSender)})`);
+          }
         }
       }
-      diff.push({
-        action: "update",
-        partnerId: p.id,
-        matchKey,
-        changes: changes.length ? changes : undefined,
-        partner: { ...row, companyNormalized: row.companyNormalized ?? company },
-        yearlyEvents: row.years
-          ? Object.entries(row.years).map(([y, ev]) => ({
-              year: parseInt(y, 10),
-              danInvitedRaw: ev.danInvitedRaw,
-              danInviter: ev.danInviter,
-              giftRecipient: ev.giftRecipient,
-              giftItem: ev.giftItem,
-              giftQtyRaw: ev.giftQtyRaw,
-              giftSender: ev.giftSender,
-            }))
-          : undefined,
-      });
+      // 변경된 내용이 있을 때만 미리보기/적용 대상에 포함 (고유값만 맞고 변경 없으면 제외)
+      if (changes.length > 0) {
+        diff.push({
+          action: "update",
+          partnerId: p.id,
+          matchKey,
+          changes,
+          partner: { ...row, companyNormalized: row.companyNormalized ?? company },
+          yearlyEvents: row.years
+            ? Object.entries(row.years).map(([y, ev]) => ({
+                year: parseInt(y, 10),
+                danInvitedRaw: ev.danInvitedRaw,
+                danInviter: ev.danInviter,
+                giftRecipient: ev.giftRecipient,
+                giftItem: ev.giftItem,
+                giftQtyRaw: ev.giftQtyRaw,
+                giftSender: ev.giftSender,
+              }))
+            : undefined,
+        });
+      }
     } else {
       if (name || email || company) {
         diff.push({

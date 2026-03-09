@@ -24,6 +24,7 @@ type PartnerRow = {
   title: string | null;
   email: string | null;
   address: string | null;
+  hq: string | null;
   businessCardDateRaw: string | null;
   employmentStatus: string | null;
   history: string | null;
@@ -49,7 +50,21 @@ interface PartnersTableProps {
   canEdit: boolean;
 }
 
-function buildQuery(f: FilterState, page: number, eventYears: number[]): string {
+/** 헤더 colId → API sortBy 필드명 */
+const COL_ID_TO_SORT_FIELD: Record<string, string> = {
+  employmentStatus: "employmentStatus",
+  company: "companyNormalized",
+  name: "name",
+  phone: "phone",
+  department: "department",
+  title: "title",
+  email: "email",
+  address: "address",
+  businessCardDate: "businessCardDateRaw",
+  history: "history",
+};
+
+function buildQuery(f: FilterState, page: number, eventYears: number[], sortBy: string, sortOrder: "asc" | "desc"): string {
   const p = new URLSearchParams();
   if (f.employmentStatus) p.set("employmentStatus", f.employmentStatus);
   if (f.name) p.set("name", f.name);
@@ -67,6 +82,8 @@ function buildQuery(f: FilterState, page: number, eventYears: number[]): string 
   if (f.giftSender) p.set("giftSender", f.giftSender);
   p.set("page", String(page));
   p.set("limit", "50");
+  if (sortBy) p.set("sortBy", sortBy);
+  p.set("sortOrder", sortOrder);
   return p.toString();
 }
 
@@ -194,8 +211,40 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
   const [editingHistoryId, setEditingHistoryId] = useState<string | null>(null);
   const [editingHistoryValue, setEditingHistoryValue] = useState("");
   const [editingCell, setEditingCell] = useState<{ partnerId: string; colId: string } | null>(null);
+  const [editingOriginalValue, setEditingOriginalValue] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string>("updatedAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
+
+  const handleSort = (colId: string) => {
+    const field = COL_ID_TO_SORT_FIELD[colId];
+    if (!field) return;
+    if (sortBy === field) {
+      setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+    setCurrentPage(1);
+  };
+
+  const cancelCellEdit = () => {
+    if (!editingCell) return;
+    const { partnerId, colId } = editingCell;
+    const orig = editingOriginalValue ?? "";
+    setData((list) =>
+      list.map((r) => {
+        if (r.id !== partnerId) return r;
+        if (colId === "employmentStatus") return { ...r, employmentStatus: orig };
+        const pf = colIdToPartnerField(colId);
+        if (pf) return { ...r, [pf]: orig };
+        return r;
+      })
+    );
+    setEditingCell(null);
+    setEditingOriginalValue(null);
+  };
 
   const DAN_HEADERS = buildDanHeaders(eventYears);
   const GIFT_HEADERS = buildGiftHeaders(eventYears);
@@ -207,7 +256,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
 
   useEffect(() => {
     setLoading(true);
-    const q = buildQuery(filters, currentPage, eventYears);
+    const q = buildQuery(filters, currentPage, eventYears, sortBy, sortOrder);
     fetch(`/api/partners?${q}`)
       .then((r) => r.json())
       .then((res) => {
@@ -216,7 +265,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
       })
       .catch(() => setData([]))
       .finally(() => setLoading(false));
-  }, [filters, refreshKey, currentPage, eventYears]);
+  }, [filters, refreshKey, currentPage, eventYears, sortBy, sortOrder]);
 
   const showOptional = OPTIONAL_HEADERS.filter((h) => filters.showColumns.includes(h.id));
   const expandedOptional = showOptional.flatMap((h): { id: string; label: string }[] => {
@@ -442,6 +491,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
             className="block min-h-[32px] py-1.5 px-2 rounded border border-transparent hover:border-input cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
+              setEditingOriginalValue(val);
               setEditingCell({ partnerId: p.id, colId });
             }}
           >
@@ -450,22 +500,50 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
         );
       }
       return (
-        <select
-          className="flex h-8 w-[100px] rounded-md border border-input bg-background px-2 text-sm"
-          value={p.employmentStatus ?? ""}
-          onChange={(e) => {
-            e.stopPropagation();
-            handleEmploymentStatusChange(p.id, e.target.value);
-            setEditingCell(null);
-          }}
-          onBlur={() => setEditingCell(null)}
-          autoFocus
-        >
-          <option value="">선택</option>
-          {EMPLOYMENT_STATUS_VALUES.map((v) => (
-            <option key={v} value={v}>{v}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-1 flex-wrap">
+          <select
+            className="flex h-8 w-[100px] rounded-md border border-input bg-background px-2 text-sm"
+            value={p.employmentStatus ?? ""}
+            onChange={(e) =>
+              setData((list) =>
+                list.map((r) => (r.id === p.id ? { ...r, employmentStatus: e.target.value } : r))
+              )
+            }
+            onClick={(e) => e.stopPropagation()}
+            autoFocus
+          >
+            <option value="">선택</option>
+            {EMPLOYMENT_STATUS_VALUES.map((v) => (
+              <option key={v} value={v}>{v}</option>
+            ))}
+          </select>
+          <Button
+            type="button"
+            size="sm"
+            variant="default"
+            className="h-8 px-2 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEmploymentStatusChange(p.id, p.employmentStatus ?? "");
+              setEditingCell(null);
+              setEditingOriginalValue(null);
+            }}
+          >
+            저장
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 px-2 text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              cancelCellEdit();
+            }}
+          >
+            취소
+          </Button>
+        </div>
       );
     }
     if (partnerField && canEdit) {
@@ -475,6 +553,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
             className="block min-h-[32px] py-1.5 px-2 rounded border border-transparent hover:border-input cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
+              setEditingOriginalValue(val);
               setEditingCell({ partnerId: p.id, colId });
             }}
           >
@@ -482,25 +561,50 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
           </span>
         );
       }
+      const currentVal = (p as Record<string, unknown>)[partnerField] ?? "";
       return (
-        <input
-          className="flex h-8 w-full min-w-0 rounded-md border border-input bg-background px-2 text-sm"
-          value={val}
-          onChange={(e) => setData((list) =>
-            list.map((row) => (row.id === p.id ? { ...row, [partnerField]: e.target.value } : row))
-          )}
-          onBlur={(e) => {
-            const v = e.target.value;
-            if (v !== val) handlePartnerFieldChange(p.id, partnerField, v);
-            setEditingCell(null);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-            if (e.key === "Escape") setEditingCell(null);
-          }}
-          onClick={(e) => e.stopPropagation()}
-          autoFocus
-        />
+        <div className="flex items-center gap-1 flex-wrap min-w-0">
+          <input
+            className="flex h-8 flex-1 min-w-[80px] rounded-md border border-input bg-background px-2 text-sm"
+            value={String(currentVal)}
+            onChange={(e) =>
+              setData((list) =>
+                list.map((row) => (row.id === p.id ? { ...row, [partnerField]: e.target.value } : row))
+              )
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Escape") cancelCellEdit();
+            }}
+            onClick={(e) => e.stopPropagation()}
+            autoFocus
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="default"
+            className="h-8 px-2 text-xs shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePartnerFieldChange(p.id, partnerField, String(currentVal));
+              setEditingCell(null);
+              setEditingOriginalValue(null);
+            }}
+          >
+            저장
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 px-2 text-xs shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              cancelCellEdit();
+            }}
+          >
+            취소
+          </Button>
+        </div>
       );
     }
     if (eventInfo && canEdit) {
@@ -556,7 +660,13 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
             setEditingCell(null);
           }}
           onKeyDown={(e) => {
-            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const input = e.target as HTMLInputElement;
+              const v = input.value;
+              if (v !== val) handleEventFieldChange(p.id, year, field, v);
+              setEditingCell(null);
+            }
             if (e.key === "Escape") setEditingCell(null);
           }}
           onClick={(e) => e.stopPropagation()}
@@ -616,16 +726,44 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                 className="rounded border-input cursor-pointer"
               />
             </TableHead>
-            {FIXED_HEADERS.map((h) => (
-              <TableHead key={h.id} className="whitespace-nowrap">
-                {h.label}
-              </TableHead>
-            ))}
-            {expandedOptional.map((item) => (
-              <TableHead key={item.id} className="whitespace-nowrap">
-                {item.label}
-              </TableHead>
-            ))}
+            {FIXED_HEADERS.map((h) => {
+              const sortField = COL_ID_TO_SORT_FIELD[h.id];
+              const isActive = sortField && sortBy === sortField;
+              return (
+                <TableHead
+                  key={h.id}
+                  className={`whitespace-nowrap ${sortField ? "cursor-pointer select-none hover:bg-muted/50" : ""}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (sortField) handleSort(h.id);
+                  }}
+                >
+                  <span className="inline-flex items-center gap-0.5">
+                    {h.label}
+                    {isActive && <span className="text-muted-foreground">{sortOrder === "asc" ? " ↑" : " ↓"}</span>}
+                  </span>
+                </TableHead>
+              );
+            })}
+            {expandedOptional.map((item) => {
+              const sortField = COL_ID_TO_SORT_FIELD[item.id];
+              const isActive = sortField && sortBy === sortField;
+              return (
+                <TableHead
+                  key={item.id}
+                  className={`whitespace-nowrap ${sortField ? "cursor-pointer select-none hover:bg-muted/50" : ""}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (sortField) handleSort(item.id);
+                  }}
+                >
+                  <span className="inline-flex items-center gap-0.5">
+                    {item.label}
+                    {isActive && <span className="text-muted-foreground">{sortOrder === "asc" ? " ↑" : " ↓"}</span>}
+                  </span>
+                </TableHead>
+              );
+            })}
             {showDan.map((h) => (
               <TableHead key={h.id} className="whitespace-nowrap">
                 {h.label}
