@@ -61,6 +61,15 @@ npm run dev
 
 - 로그인: `.env`의 `ALLOWED_EDITOR_EMAILS`에 등록된 이메일 + 아무 비밀번호(Credentials 모드)
 
+### 로컬에서 동작이 안 될 때
+
+| 원인 | 확인·해결 |
+|------|------------|
+| **DB 연결 실패** | `prisma/schema.prisma`는 **PostgreSQL**을 사용합니다. `.env`의 `DATABASE_URL`이 `postgresql://...` 형태인지 확인하고, 해당 Postgres(로컬 설치 또는 Neon 등)가 실행 중인지 확인하세요. |
+| **로그인 화면에만 먼저 나오고 들어갈 수 없음** | **비밀번호 없이 쓰려면**: `DASHBOARD_PASSWORD`와 `DASHBOARD_ALLOWED_IDS`를 **둘 다 비우거나** 주석 처리하세요. 비밀번호만 넣고 `DASHBOARD_ALLOWED_IDS`를 비우면 로그인 API가 허용 ID가 없다고 해서 로그인이 불가능합니다. |
+| **대시보드 API 401 / 500** | 비밀번호를 쓰는 경우 `DASHBOARD_PASSWORD`와 `DASHBOARD_ALLOWED_IDS`(쉼표 구분 이메일)를 **둘 다** 설정해야 합니다. 로그인 후 쿠키가 설정되므로 같은 브라우저에서는 재접속 시 로그인 유지됩니다. |
+| **`/api/auth/dashboard-required` 호출 실패** | 개발 서버(`npm run dev`)가 떠 있는지, 같은 포트(예: 3000)로 접속했는지 확인하세요. 이 API가 실패해도 이제 로그인 페이지로만 보내지 않고 진입을 시도하도록 변경되어 있습니다(미들웨어가 쿠키로 한 번 더 검사). |
+
 ## 배포 (허가된 이메일만 링크로 접근)
 
 - **허가된 사람만 접근**: `ALLOWED_EDITOR_EMAILS`에 넣은 이메일만 로그인 가능. 배포 후 접속 URL을 해당 사용자에게만 공유하면 됩니다.

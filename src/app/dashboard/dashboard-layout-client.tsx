@@ -38,7 +38,9 @@ export function DashboardLayoutClient({
         }
       })
       .catch(() => {
-        router.replace("/dashboard/login");
+        // 로컬 등에서 API 실패 시 로그인으로 보내지 않고 진입 허용(미들웨어가 쿠키로 한 번 더 검사함)
+        sessionStorage.setItem(SESSION_KEY, "1");
+        setChecked(true);
       });
   }, [isLoginPage, router]);
 
