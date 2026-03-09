@@ -16,18 +16,30 @@ export function DashboardLayoutClient({
   const [checked, setChecked] = useState(false);
   const isLoginPage = pathname === "/dashboard/login";
 
-  // 창을 닫았다 새 탭/창으로 열면 sessionStorage가 비어 있어 로그인 페이지로 보냄
+  // 비밀번호 미설정(로컬)이면 로그인 없이 진입, 설정돼 있으면 sessionStorage 없을 때만 로그인으로
   useEffect(() => {
     if (isLoginPage) {
       setChecked(true);
       return;
     }
     if (typeof window === "undefined") return;
-    if (!sessionStorage.getItem(SESSION_KEY)) {
-      router.replace("/dashboard/login");
+    if (sessionStorage.getItem(SESSION_KEY)) {
+      setChecked(true);
       return;
     }
-    setChecked(true);
+    fetch("/api/auth/dashboard-required")
+      .then((r) => r.json())
+      .then((data: { required?: boolean }) => {
+        if (data.required) {
+          router.replace("/dashboard/login");
+        } else {
+          sessionStorage.setItem(SESSION_KEY, "1");
+          setChecked(true);
+        }
+      })
+      .catch(() => {
+        router.replace("/dashboard/login");
+      });
   }, [isLoginPage, router]);
 
   if (isLoginPage) {

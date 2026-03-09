@@ -18,7 +18,7 @@ type AuditRow = {
   versionName: string;
   userId: string;
   workType: string;
-  detail: string;
+  detailSummary: string;
   detailItems?: string[];
   createdAt: string;
 };
@@ -71,6 +71,32 @@ export default function AuditPage() {
     } catch {
       return iso;
     }
+  };
+
+  /** 상세 항목에서 유형과 데이터 부분 분리 (토글 열렸을 때 그룹별 표시용) */
+  const groupDetailItems = (items: string[]) => {
+    const groups: Record<string, string[]> = {};
+    const order = ["파트너 삭제", "파트너 추가", "파트너 수정", "엑셀파일 업로드", "기타"];
+    const getCat = (s: string) => {
+      const t = s.trim();
+      if (t.startsWith("파트너 삭제")) return "파트너 삭제";
+      if (t.startsWith("파트너 추가")) return "파트너 추가";
+      if (t.startsWith("신규") || t.includes("건 추가") || t.includes("건 수정")) return "엑셀파일 업로드";
+      if (t.startsWith("회사:") || t.includes("회사:") || t === "파트너 수정") return "파트너 수정";
+      return "기타";
+    };
+    const getDataPart = (s: string, cat: string) => {
+      const t = s.trim();
+      if (cat === "파트너 삭제" && t.startsWith("파트너 삭제:")) return t.slice("파트너 삭제:".length).trim();
+      if (cat === "파트너 추가" && t.startsWith("파트너 추가:")) return t.slice("파트너 추가:".length).trim();
+      return t;
+    };
+    for (const item of items) {
+      const cat = getCat(item);
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(getDataPart(item, cat));
+    }
+    return order.filter((cat) => groups[cat]?.length).map((cat) => ({ category: cat, lines: groups[cat]! }));
   };
 
   return (
@@ -130,10 +156,10 @@ export default function AuditPage() {
                                 toggleDetail(row.id);
                               }
                             }}
-                            title={row.detail}
+                            title={row.detailSummary}
                           >
                             <span className="inline-flex items-center gap-1">
-                              <span className="truncate">{row.detail}</span>
+                              <span className="truncate">{row.detailSummary}</span>
                               {isExpanded ? (
                                 <ChevronUp className="h-4 w-4 shrink-0" aria-hidden />
                               ) : (
@@ -145,17 +171,26 @@ export default function AuditPage() {
                         {isExpanded && (
                           <TableRow className="bg-muted/20 hover:bg-muted/20">
                             <TableCell colSpan={5} className="p-3 text-sm border-t border-border/50">
-                              <div className="font-medium text-muted-foreground mb-1">상세 내용</div>
+                              <div className="font-medium text-muted-foreground mb-2">상세 내용</div>
                               {row.detailItems && row.detailItems.length > 0 ? (
-                                <ul className="list-disc list-inside space-y-1">
-                                  {row.detailItems.map((item, i) => (
-                                    <li key={i} className="whitespace-pre-wrap break-words">
-                                      {item}
-                                    </li>
+                                <div className="space-y-4">
+                                  {groupDetailItems(row.detailItems).map(({ category, lines }) => (
+                                    <div key={category}>
+                                      <div className="font-medium text-foreground mb-1">
+                                        {category} ({lines.length}건)
+                                      </div>
+                                      <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
+                                        {lines.map((line, i) => (
+                                          <li key={i} className="break-words">
+                                            {line}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
                                   ))}
-                                </ul>
+                                </div>
                               ) : (
-                                <div className="whitespace-pre-wrap break-words">{row.detail}</div>
+                                <div className="whitespace-pre-wrap break-words">{row.detailSummary}</div>
                               )}
                             </TableCell>
                           </TableRow>
