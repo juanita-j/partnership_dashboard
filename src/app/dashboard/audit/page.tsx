@@ -19,6 +19,7 @@ type AuditRow = {
   userId: string;
   workType: string;
   detail: string;
+  detailItems?: string[];
   createdAt: string;
 };
 
@@ -64,9 +65,17 @@ export default function AuditPage() {
     load();
   }, [load]);
 
+  const formatDate = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleString("ko-KR");
+    } catch {
+      return iso;
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <h1 className="text-base font-bold">버전 업데이트 이력</h1>
+      <h1 className="text-base font-bold">업데이트 이력</h1>
       <div className="flex flex-wrap items-center gap-2">
         <Input
           placeholder="수정인명(이메일)으로 필터"
@@ -87,6 +96,7 @@ export default function AuditPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>버전명</TableHead>
+                  <TableHead>일시</TableHead>
                   <TableHead>수정인명</TableHead>
                   <TableHead>작업유형</TableHead>
                   <TableHead>상세</TableHead>
@@ -95,7 +105,7 @@ export default function AuditPage() {
               <TableBody>
                 {data.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
                       기록이 없습니다.
                     </TableCell>
                   </TableRow>
@@ -106,9 +116,11 @@ export default function AuditPage() {
                       <Fragment key={row.id}>
                         <TableRow>
                           <TableCell className="text-sm font-medium">{row.versionName}</TableCell>
+                          <TableCell className="text-sm whitespace-nowrap">{formatDate(row.createdAt)}</TableCell>
                           <TableCell className="text-sm">{row.userId}</TableCell>
+                          <TableCell className="text-sm">{row.workType}</TableCell>
                           <TableCell
-                            className="text-sm cursor-pointer select-none hover:bg-muted/50 align-middle"
+                            className="text-sm max-w-[320px] truncate cursor-pointer select-none hover:bg-muted/50 align-middle"
                             onClick={() => toggleDetail(row.id)}
                             role="button"
                             tabIndex={0}
@@ -118,9 +130,10 @@ export default function AuditPage() {
                                 toggleDetail(row.id);
                               }
                             }}
+                            title={row.detail}
                           >
                             <span className="inline-flex items-center gap-1">
-                              {row.workType}
+                              <span className="truncate">{row.detail}</span>
                               {isExpanded ? (
                                 <ChevronUp className="h-4 w-4 shrink-0" aria-hidden />
                               ) : (
@@ -128,15 +141,22 @@ export default function AuditPage() {
                               )}
                             </span>
                           </TableCell>
-                          <TableCell className="text-sm max-w-[320px] truncate" title={row.detail}>
-                            {row.detail}
-                          </TableCell>
                         </TableRow>
                         {isExpanded && (
                           <TableRow className="bg-muted/20 hover:bg-muted/20">
-                            <TableCell colSpan={4} className="p-3 text-sm border-t border-border/50">
+                            <TableCell colSpan={5} className="p-3 text-sm border-t border-border/50">
                               <div className="font-medium text-muted-foreground mb-1">상세 내용</div>
-                              <div className="whitespace-pre-wrap break-words">{row.detail}</div>
+                              {row.detailItems && row.detailItems.length > 0 ? (
+                                <ul className="list-disc list-inside space-y-1">
+                                  {row.detailItems.map((item, i) => (
+                                    <li key={i} className="whitespace-pre-wrap break-words">
+                                      {item}
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <div className="whitespace-pre-wrap break-words">{row.detail}</div>
+                              )}
                             </TableCell>
                           </TableRow>
                         )}

@@ -54,7 +54,7 @@ export function DashboardLayoutClient({
               회사명 매핑 조건
             </Link>
             <Link href="/dashboard/audit" className="text-sm text-gray-400 hover:text-gray-200">
-              버전 업데이트 이력
+              업데이트 이력
             </Link>
           </nav>
         </div>

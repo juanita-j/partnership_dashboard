@@ -111,7 +111,10 @@ export async function PATCH(
       include: { yearlyEvents: true },
     });
     const userId = getDashboardUserId(req);
-    if (userId) await logAudit(userId, "partner_update", id, "PATCH 인라인 편집");
+    if (userId) {
+      const detail = `회사: ${partner.companyNormalized ?? ""}, 이름: ${partner.name}`.trim();
+      await logAudit(userId, "partner_update", null, detail || "인라인 편집");
+    }
     return NextResponse.json({ ...partner, eventsByYear: toEventsByYear(partner.yearlyEvents) });
   } catch (e) {
     console.error(e);
@@ -154,7 +157,10 @@ export async function PUT(
       include: { yearlyEvents: true },
     });
     const userId = getDashboardUserId(req);
-    if (userId) await logAudit(userId, "partner_update", id, "PUT 전체 수정");
+    if (userId) {
+      const detail = `회사: ${partner.companyNormalized ?? ""}, 이름: ${partner.name}`.trim();
+      await logAudit(userId, "partner_update", null, detail || "전체 수정");
+    }
     return NextResponse.json({ ...partner, eventsByYear: toEventsByYear(partner.yearlyEvents) });
   } catch (e) {
     console.error(e);
@@ -169,8 +175,14 @@ export async function DELETE(
   try {
     const { id } = await params;
     const userId = getDashboardUserId(req);
+    const before = await prisma.partner.findUnique({ where: { id }, select: { name: true, companyNormalized: true } });
     await prisma.partner.delete({ where: { id } });
-    if (userId) await logAudit(userId, "partner_delete", id, null);
+    if (userId) {
+      const detail = before
+        ? `회사: ${before.companyNormalized ?? ""}, 이름: ${before.name}`.trim()
+        : "파트너 삭제";
+      await logAudit(userId, "partner_delete", null, detail);
+    }
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error(e);

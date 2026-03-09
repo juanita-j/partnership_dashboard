@@ -169,7 +169,10 @@ export async function POST(req: NextRequest) {
       include: { yearlyEvents: true },
     });
     const userId = getDashboardUserId(req);
-    if (userId) await logAudit(userId, "partner_create", partner.id, partner.name);
+    if (userId) {
+      const detail = `회사: ${partner.companyNormalized ?? ""}, 이름: ${partner.name}`.trim();
+      await logAudit(userId, "partner_create", null, detail || "파트너 추가");
+    }
     return NextResponse.json({ ...partner, eventsByYear: toEventsByYear(partner.yearlyEvents) });
   } catch (e) {
     console.error(e);
