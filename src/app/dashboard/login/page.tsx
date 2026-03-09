@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 
 export default function DashboardLoginPage() {
   const router = useRouter();
+  const [id, setId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,12 +20,15 @@ export default function DashboardLoginPage() {
       const res = await fetch("/api/auth/dashboard-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ id: id.trim(), password }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "비밀번호가 일치하지 않습니다.");
+        setError(data.error ?? "ID 또는 비밀번호가 일치하지 않습니다.");
         return;
+      }
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("dashboard_auth", "1");
       }
       router.replace("/dashboard");
       router.refresh();
@@ -39,16 +43,26 @@ export default function DashboardLoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-6">
         <h1 className="text-xl font-semibold text-center">
-          네이버 파트너십 파트너사DB 대시보드
+          네이버 파트너십 DB 대시보드
         </h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
+            type="email"
+            inputMode="email"
+            autoComplete="username"
+            value={id}
+            onChange={(e) => setId(e.target.value)}
+            placeholder="이메일 주소 (ID)"
+            className="w-full"
+            disabled={loading}
+          />
+          <Input
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="비밀번호를 입력하세요"
             className="w-full"
-            autoFocus
             disabled={loading}
           />
           {error && (

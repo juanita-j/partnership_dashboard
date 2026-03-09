@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { MergeDiffItem } from "@/lib/excel-import";
+import { getDashboardUserId, logAudit } from "@/lib/audit";
 
 /** Merge: 비어있지 않은 컬럼만 업데이트. history에 변경 로그 append */
 export async function POST(req: NextRequest) {
@@ -135,6 +136,8 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+    const userId = getDashboardUserId(req);
+    if (userId) await logAudit(userId, "import_apply", null, JSON.stringify({ created, updated }));
     return NextResponse.json({ created, updated });
   } catch (e) {
     console.error(e);

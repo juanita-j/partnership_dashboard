@@ -148,7 +148,7 @@ export default function CompanyAliasPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">회사명 매핑 조건</h1>
+        <h1 className="text-base font-bold">회사명 매핑 조건</h1>
         {editor && (
           <Button size="sm" onClick={handleAdd}>
             매핑 추가

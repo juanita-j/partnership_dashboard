@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { stripCompanySuffix, upperLatin, normalizeCompany } from "@/lib/company";
 import { partnerCreateSchema } from "@/lib/validations";
+import { getDashboardUserId, logAudit } from "@/lib/audit";
 import type { Prisma } from "@prisma/client";
 
 const YEAR_RANGE = { min: 2023, max: 2030 };
@@ -167,6 +168,8 @@ export async function POST(req: NextRequest) {
       },
       include: { yearlyEvents: true },
     });
+    const userId = getDashboardUserId(req);
+    if (userId) await logAudit(userId, "partner_create", partner.id, partner.name);
     return NextResponse.json({ ...partner, eventsByYear: toEventsByYear(partner.yearlyEvents) });
   } catch (e) {
     console.error(e);

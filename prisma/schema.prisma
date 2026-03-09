@@ -123,3 +123,15 @@ model SavedFilter {
   filtersJson String
   createdAt   DateTime @default(now())
 }
+
+model DashboardAuditLog {
+  id        String   @id @default(cuid())
+  userId    String   // 로그인한 이메일(ID)
+  action    String   // partner_create | partner_update | partner_delete | import_apply
+  entityId  String?  // 파트너 ID 등
+  details   String?  // JSON 등 추가 정보
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}

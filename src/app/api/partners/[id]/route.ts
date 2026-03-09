@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { stripCompanySuffix, upperLatin, normalizeCompany } from "@/lib/company";
 import { partnerUpdateSchema, EMPLOYMENT_STATUS_ENUM } from "@/lib/validations";
+import { getDashboardUserId, logAudit } from "@/lib/audit";
 
 const YEARS = [2023, 2024, 2025];
 
@@ -109,6 +110,8 @@ export async function PATCH(
       data: updatePayload as never,
       include: { yearlyEvents: true },
     });
+    const userId = getDashboardUserId(req);
+    if (userId) await logAudit(userId, "partner_update", id, "PATCH 인라인 편집");
     return NextResponse.json({ ...partner, eventsByYear: toEventsByYear(partner.yearlyEvents) });
   } catch (e) {
     console.error(e);
@@ -150,6 +153,8 @@ export async function PUT(
       data: updatePayload as never,
       include: { yearlyEvents: true },
     });
+    const userId = getDashboardUserId(req);
+    if (userId) await logAudit(userId, "partner_update", id, "PUT 전체 수정");
     return NextResponse.json({ ...partner, eventsByYear: toEventsByYear(partner.yearlyEvents) });
   } catch (e) {
     console.error(e);
@@ -158,12 +163,14 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const userId = getDashboardUserId(req);
     await prisma.partner.delete({ where: { id } });
+    if (userId) await logAudit(userId, "partner_delete", id, null);
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error(e);

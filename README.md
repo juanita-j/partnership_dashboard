@@ -32,10 +32,12 @@ NEXTAUTH_SECRET="랜덤한 시크릿 키"
 NEXTAUTH_URL="http://localhost:3000"
 ALLOWED_EDITOR_EMAILS="editor@example.com,admin@example.com"
 DASHBOARD_PASSWORD=""
+DASHBOARD_ALLOWED_IDS="user1@example.com,user2@example.com"
 ```
 
 - `ALLOWED_EDITOR_EMAILS`: 로그인 허용 이메일 목록 (쉼표 구분). 이 목록에 있는 이메일만 로그인 가능하며, 모두 **editor** 권한으로 로그인됩니다.
-- `DASHBOARD_PASSWORD`: **(선택)** 대시보드 접속용 비밀번호. 설정하면 `/dashboard` 및 하위 경로 접속 시 비밀번호 입력 화면이 먼저 나오며, 올바른 비밀번호 입력 후 접속하면 메인 대시보드로 이동합니다. 비우거나 설정하지 않으면 비밀번호 없이 접속 가능(로컬 개발용).
+- `DASHBOARD_PASSWORD`: **(선택)** 대시보드 접속용 비밀번호. 설정하면 `/dashboard` 및 하위 경로 접속 시 ID·비밀번호 입력 화면이 먼저 나오며, **허용된 ID**와 이 비밀번호를 모두 맞게 입력해야 접속 가능합니다. 비우거나 설정하지 않으면 비밀번호 없이 접속 가능(로컬 개발용).
+- `DASHBOARD_ALLOWED_IDS`: **(선택, DASHBOARD_PASSWORD 사용 시 필수)** 접속을 허용할 ID(이메일 주소) 목록. 쉼표로 구분하며, 여러 개 입력·수정 가능. 예: `a@naver.com,b@naver.com`
 
 ### 3. DB 마이그레이션 및 시드
 
@@ -64,17 +66,24 @@ npm run dev
 - **허가된 사람만 접근**: `ALLOWED_EDITOR_EMAILS`에 넣은 이메일만 로그인 가능. 배포 후 접속 URL을 해당 사용자에게만 공유하면 됩니다.
 - **상세 절차**: [DEPLOY.md](./DEPLOY.md) 참고 (Railway 권장, Vercel 옵션 포함).
 
-### Vercel에서 대시보드 비밀번호 설정
+### Vercel에서 대시보드 ID·비밀번호 설정
 
-배포된 대시보드 링크로 들어오는 **모든 사용자**가 비밀번호를 입력해야 접속하도록 하려면, Vercel에 환경 변수를 설정하면 됩니다.
+배포된 대시보드에 **허용된 ID만** 접속하고, **동일한 비밀번호**로 로그인하게 하려면 Vercel에 아래 환경 변수를 설정합니다.
 
 1. **Vercel 대시보드** → 해당 프로젝트 선택 → **Settings** → **Environment Variables**
-2. **Key**: `DASHBOARD_PASSWORD`
-3. **Value**: 사용할 비밀번호(원하는 문자열, 예: `MySecurePass123`)
-4. **Environment**: Production(필요 시 Preview/Development도 선택)
-5. **Save** 후 재배포(또는 다음 배포부터 적용)
+2. 다음 두 변수를 추가합니다.
 
-설정 후 `/dashboard` 또는 `/dashboard/...` 로 접속하면 먼저 비밀번호 입력 화면이 나오고, 설정한 비밀번호와 일치하면 대시보드 메인으로 이동합니다. 인증은 세션 쿠키로만 유지되므로, 브라우저(탭)를 모두 닫았다가 다시 접속하면 비밀번호 입력 화면이 다시 뜹니다.
+| Key | Value | 설명 |
+|-----|--------|------|
+| `DASHBOARD_PASSWORD` | 사용할 비밀번호(예: `MySecurePass123`) | 모든 허용 ID가 이 비밀번호 하나로 로그인 |
+| `DASHBOARD_ALLOWED_IDS` | 접속 허용 이메일, 쉼표 구분(예: `a@naver.com,b@naver.com`) | 이 목록에 있는 ID만 접속 가능. 추가·수정 시 이 값만 변경 후 재배포 |
+
+3. **Environment**: Production(필요 시 Preview/Development도 선택) → **Save**
+4. **재배포** 후 적용(다음 배포부터 자동 반영 가능)
+
+- 접속 시 **ID(이메일)** 와 **비밀번호**를 모두 입력해야 대시보드로 이동합니다.
+- **창을 닫았다가 다시 링크로 열면** 비밀번호 입력 화면이 다시 뜹니다. **새로고침**만 할 때는 다시 입력하지 않아도 됩니다.
+- 허용 ID를 바꾸거나 추가하려면 `DASHBOARD_ALLOWED_IDS` 값만 수정한 뒤 재배포하면 됩니다.
 
 ## 주요 기능
 
