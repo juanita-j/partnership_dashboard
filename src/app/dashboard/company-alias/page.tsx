@@ -172,25 +172,20 @@ export default function CompanyAliasPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-base font-bold">회사명 매핑 조건</h1>
         {editor && (
-          <Button size="sm" onClick={handleAdd}>
-            매핑 추가
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={handleUnifyByDomain} disabled={unifying}>
+              {unifying ? "실행 중..." : "회사명 통일"}
+            </Button>
+            <Button size="sm" onClick={handleAdd}>
+              매핑 추가
+            </Button>
+          </div>
         )}
       </div>
       <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
         <li>엑셀파일로 업로드/직접 입력한 회사명 중 &apos;별칭&apos;에 해당되는 회사명이 &apos;표준명&apos;으로 자동 변환됩니다.</li>
-        <li>한국 회사명은 한국어로 통일, 글로벌 회사명은 알파벳 표기로 통일합니다.</li>
+        <li>&apos;회사명 통일&apos; 버튼을 통해 같은 이메일 도메인(@)을 가지고 있으나 회사명이 다른 파트너는 하나의 회사명으로 통일합니다. (한국 회사명은 한국어로, 글로벌 회사명은 알파벳 표기)</li>
       </ul>
-      {editor && (
-        <div className="rounded-lg border bg-muted/20 p-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-muted-foreground">
-            같은 이메일 도메인(@ 뒤 주소)인데 회사명이 다른 파트너는 하나의 회사명으로 통일할 수 있습니다. (한국어 &gt; 한국어+영어 &gt; 영어, 띄어쓰기 무시)
-          </p>
-          <Button size="sm" variant="outline" onClick={handleUnifyByDomain} disabled={unifying}>
-            {unifying ? "실행 중..." : "도메인별 회사명 통일 실행"}
-          </Button>
-        </div>
-      )}
       {loading ? (
         <div className="py-8 text-center text-muted-foreground">로딩 중...</div>
       ) : (
