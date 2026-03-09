@@ -98,10 +98,25 @@ export default function AuditPage() {
     return null;
   };
 
-  /** 상세 항목에서 유형과 데이터 부분 분리 (토글 열렸을 때 그룹별 표시용) */
-  const groupDetailItems = (items: string[]) => {
-    const groups: Record<string, string[]> = {};
-    const order = ["파트너 삭제", "파트너 추가", "파트너 수정", "엑셀파일 업로드", "기타"];
+  /** "필드명 이전 → 이후" 를 "필드명 (이전 → 이후)" 로 포맷 */
+  const formatChangeWithParens = (c: string): string => {
+    const arrow = " → ";
+    const idx = c.indexOf(arrow);
+    if (idx === -1) return c;
+    const before = c.slice(0, idx).trim();
+    const after = c.slice(idx + arrow.length).trim();
+    const spaceIdx = before.lastIndexOf(" ");
+    if (spaceIdx <= 0) return `${before} (${after})`;
+    const label = before.slice(0, spaceIdx).trim();
+    const oldVal = before.slice(spaceIdx + 1).trim();
+    return `${label} (${oldVal}${arrow}${after})`;
+  };
+
+  type DetailEntry = { kind: "수정" | "신규" | "삭제" | "엑셀"; name: string; detail: string };
+
+  /** 상세 항목을 예시 포맷용 평탄 목록으로 변환 */
+  const flattenDetailEntries = (items: string[]): DetailEntry[] => {
+    const entries: DetailEntry[] = [];
     const getCat = (s: string) => {
       const t = s.trim();
       if (t.startsWith("파트너 삭제")) return "파트너 삭제";
@@ -111,82 +126,82 @@ export default function AuditPage() {
       if (t.startsWith("회사:") || t.includes("회사:") || t === "파트너 수정") return "파트너 수정";
       return "기타";
     };
-    const getDataPart = (s: string, cat: string) => {
-      const t = s.trim();
-      if (cat === "파트너 삭제" && t.startsWith("파트너 삭제:")) return t.slice("파트너 삭제:".length).trim();
-      if (cat === "파트너 추가" && t.startsWith("파트너 추가:")) return t.slice("파트너 추가:".length).trim();
-      if (cat === "파트너 수정") return t;
-      return t;
-    };
     for (const item of items) {
       const cat = getCat(item);
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(getDataPart(item, cat));
+      let dataLine = item.trim();
+      if (cat === "파트너 삭제" && dataLine.startsWith("파트너 삭제:"))
+        dataLine = dataLine.slice("파트너 삭제:".length).trim();
+      if (cat === "파트너 추가" && dataLine.startsWith("파트너 추가:"))
+        dataLine = dataLine.slice("파트너 추가:".length).trim();
+
+      const json = parseDetailJson(dataLine);
+      if (json) {
+        const { name } = parseCompanyName(json.summary);
+        const displayName = name ?? "(이름없음)";
+        const changeStr =
+          json.changes.length > 0
+            ? json.changes.map(formatChangeWithParens).join(", ")
+            : "";
+        entries.push({ kind: "수정", name: displayName, detail: changeStr });
+        continue;
+      }
+      if (cat === "파트너 삭제") {
+        const { name } = parseCompanyName(dataLine);
+        entries.push({ kind: "삭제", name: name ?? "(이름없음)", detail: "" });
+        continue;
+      }
+      if (cat === "파트너 추가") {
+        const { name } = parseCompanyName(dataLine);
+        entries.push({
+          kind: "신규",
+          name: name ?? "(이름없음)",
+          detail: "신규 생성 (회사/이름/휴대폰 등 엑셀 행 기준)",
+        });
+        continue;
+      }
+      if (cat === "엑셀파일 업로드") {
+        entries.push({ kind: "엑셀", name: "", detail: dataLine });
+        continue;
+      }
+      if (cat === "파트너 수정" && dataLine) {
+        const { name } = parseCompanyName(dataLine);
+        entries.push({ kind: "수정", name: name ?? "(이름없음)", detail: dataLine });
+      }
     }
-    return order.filter((cat) => groups[cat]?.length).map((cat) => ({ category: cat, lines: groups[cat]! }));
+    return entries;
   };
 
-  /** 한 줄 상세를 엑셀 미리보기 스타일 카드로 렌더 (이름/회사 + 변경 항목) */
-  const renderDetailLine = (category: string, dataLine: string) => {
-    const json = parseDetailJson(dataLine);
-    if (json) {
-      const { name, company } = parseCompanyName(json.summary);
-      const displayName = name ?? "(이름없음)";
-      const displayCompany = company != null ? stripCompanySuffixForDisplay(company) : "";
-      return (
-        <div className="rounded border border-border bg-card p-3 text-sm">
-          <p className="font-medium text-foreground">
-            {category}: {displayCompany ? `${displayCompany} · ${displayName}` : displayName}
-          </p>
-          {json.changes.length > 0 && (
-            <p className="mt-1.5 text-muted-foreground">
-              <span className="font-medium text-foreground/80">수정 항목: </span>
-              {json.changes.map((c, j) => (
-                <span key={j}>
-                  {j > 0 && " · "}
-                  {c}
-                </span>
-              ))}
-            </p>
-          )}
-        </div>
-      );
-    }
-    if (category === "파트너 삭제" || category === "파트너 추가") {
-      const { name, company } = parseCompanyName(dataLine);
-      const parts = [];
-      if (name != null) parts.push(`이름: ${name}`);
-      if (company != null) parts.push(`회사: ${stripCompanySuffixForDisplay(company)}`);
-      const sub = parts.length ? ` (${parts.join(", ")})` : "";
-      return (
-        <div className="rounded border border-border bg-card p-3 text-sm">
-          <p className="font-medium text-foreground">{category}{sub}</p>
-        </div>
-      );
-    }
-    if (category === "엑셀파일 업로드") {
-      return (
-        <div className="rounded border border-border bg-card p-3 text-sm">
-          <p className="font-medium text-foreground">{dataLine}</p>
-        </div>
-      );
-    }
-    if (category === "파트너 수정" && dataLine.trim()) {
-      const { name, company } = parseCompanyName(dataLine);
-      const parts = [];
-      if (name != null) parts.push(`이름: ${name}`);
-      if (company != null) parts.push(`회사: ${stripCompanySuffixForDisplay(company)}`);
-      return (
-        <div className="rounded border border-border bg-card p-3 text-sm">
-          <p className="font-medium text-foreground">
-            {parts.length ? `회사/이름: ${parts.join(", ")}` : dataLine}
-          </p>
-        </div>
-      );
-    }
+  /** 상세 토글 본문: "변경 내용: N건" + 수정/신규/삭제 목록 포맷 */
+  const renderDetailBody = (detailItems: string[]) => {
+    const entries = flattenDetailEntries(detailItems);
+    if (entries.length === 0) return null;
     return (
-      <div className="rounded border border-border bg-card p-3 text-sm text-muted-foreground">
-        {dataLine || category}
+      <div className="space-y-4 text-sm">
+        <p className="font-medium text-foreground">변경 내용: {entries.length}건</p>
+        <div className="space-y-3">
+          {entries.map((e, i) => (
+            <div key={i} className="space-y-1">
+              {e.kind === "엑셀" ? (
+                <p className="text-foreground">{e.detail}</p>
+              ) : (
+                <>
+                  <p className="font-medium text-foreground">
+                    {e.kind === "수정" && "수정: "}
+                    {e.kind === "신규" && "신규: "}
+                    {e.kind === "삭제" && "삭제: "}
+                    {e.name}
+                  </p>
+                  {e.detail ? (
+                    <p className="text-muted-foreground pl-0">
+                      {e.kind === "수정" ? "수정 항목: " : ""}
+                      {e.detail}
+                    </p>
+                  ) : null}
+                </>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
@@ -263,27 +278,9 @@ export default function AuditPage() {
                         {isExpanded && (
                           <TableRow className="bg-muted/20 hover:bg-muted/20">
                             <TableCell colSpan={5} className="p-3 text-sm border-t border-border/50">
-                              <div className="font-medium text-muted-foreground mb-2">상세 내용</div>
-                              {row.detailItems && row.detailItems.length > 0 ? (
-                                <div className="space-y-4">
-                                  {groupDetailItems(row.detailItems).map(({ category, lines }) => (
-                                    <div key={category}>
-                                      <div className="font-medium text-foreground mb-2">
-                                        {category} ({lines.length}건)
-                                      </div>
-                                      <div className="grid gap-2 sm:grid-cols-2">
-                                        {lines.map((line, i) => (
-                                          <Fragment key={`${category}-${i}`}>
-                                            {renderDetailLine(category, line)}
-                                          </Fragment>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="whitespace-pre-wrap break-words">{row.detailSummary}</div>
-                              )}
+                              {row.detailItems && row.detailItems.length > 0
+                                ? renderDetailBody(row.detailItems)
+                                : <div className="whitespace-pre-wrap break-words">{row.detailSummary}</div>}
                             </TableCell>
                           </TableRow>
                         )}
