@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 
 const SESSION_KEY = "dashboard_auth";
 
@@ -47,9 +46,14 @@ export function DashboardLayoutClient({
     return <>{children}</>;
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (typeof window !== "undefined") {
       sessionStorage.removeItem(SESSION_KEY);
+    }
+    try {
+      await fetch("/api/auth/dashboard-logout", { method: "POST" });
+    } catch {
+      // 무시 후 로그인 페이지로 이동
     }
     router.replace("/dashboard/login");
   };
@@ -78,9 +82,13 @@ export function DashboardLayoutClient({
             </Link>
           </nav>
         </div>
-        <Button variant="outline" size="sm" onClick={handleLogout} className="shrink-0 border-gray-500 text-gray-200 hover:bg-gray-700 hover:text-white">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="shrink-0 rounded px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+        >
           로그아웃
-        </Button>
+        </button>
       </header>
       <main className="flex-1 p-4">
         {children}
