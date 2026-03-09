@@ -23,10 +23,11 @@ function looksLikeEmail(s: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
-  const expectedPassword = process.env.DASHBOARD_PASSWORD;
+  const expectedPasswordRaw = process.env.DASHBOARD_PASSWORD ?? "";
+  const expectedPassword = expectedPasswordRaw.trim();
   const allowedIds = parseAllowedIds(process.env.DASHBOARD_ALLOWED_IDS);
 
-  if (!expectedPassword || expectedPassword.length === 0) {
+  if (expectedPassword.length === 0) {
     return NextResponse.json(
       { error: "비밀번호가 설정되지 않았습니다." },
       { status: 500 }
@@ -48,29 +49,29 @@ export async function POST(request: NextRequest) {
 
   const idRaw = typeof body.id === "string" ? body.id : "";
   const id = idRaw.trim().toLowerCase();
-  const password = typeof body.password === "string" ? body.password : "";
+  const password = (typeof body.password === "string" ? body.password : "").trim();
 
   if (!id) {
     return NextResponse.json(
-      { error: "ID(이메일)를 입력하세요." },
+      { error: "아이디나 비밀번호가 잘못되었습니다." },
       { status: 400 }
     );
   }
   if (!looksLikeEmail(id)) {
     return NextResponse.json(
-      { error: "ID는 이메일 주소 형식이어야 합니다." },
+      { error: "아이디나 비밀번호가 잘못되었습니다." },
       { status: 400 }
     );
   }
   if (!allowedIds.includes(id)) {
     return NextResponse.json(
-      { error: "접속 권한이 없는 ID입니다." },
+      { error: "아이디나 비밀번호가 잘못되었습니다." },
       { status: 401 }
     );
   }
   if (password !== expectedPassword) {
     return NextResponse.json(
-      { error: "비밀번호가 일치하지 않습니다." },
+      { error: "아이디나 비밀번호가 잘못되었습니다." },
       { status: 401 }
     );
   }

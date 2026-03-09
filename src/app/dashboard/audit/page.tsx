@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,14 +11,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 type AuditRow = {
   id: string;
+  versionName: string;
   userId: string;
-  action: string;
-  actionLabel: string;
-  entityId: string | null;
-  details: string | null;
+  workType: string;
+  detail: string;
   createdAt: string;
 };
 
@@ -30,6 +30,16 @@ export default function AuditPage() {
   const [loading, setLoading] = useState(true);
   const [userIdFilter, setUserIdFilter] = useState("");
   const [page, setPage] = useState(1);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const toggleDetail = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const load = useCallback(() => {
     setLoading(true);
@@ -54,21 +64,12 @@ export default function AuditPage() {
     load();
   }, [load]);
 
-  const formatDate = (iso: string) => {
-    try {
-      const d = new Date(iso);
-      return d.toLocaleString("ko-KR");
-    } catch {
-      return iso;
-    }
-  };
-
   return (
     <div className="space-y-4">
-      <h1 className="text-base font-bold">ID별 버전 업데이트</h1>
+      <h1 className="text-base font-bold">버전 업데이트 이력</h1>
       <div className="flex flex-wrap items-center gap-2">
         <Input
-          placeholder="ID(이메일)로 필터"
+          placeholder="수정인명(이메일)으로 필터"
           value={userIdFilter}
           onChange={(e) => setUserIdFilter(e.target.value)}
           className="max-w-xs h-9"
@@ -85,32 +86,63 @@ export default function AuditPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[160px]">일시</TableHead>
-                  <TableHead>ID</TableHead>
-                  <TableHead>작업 유형</TableHead>
-                  <TableHead>대상 ID</TableHead>
+                  <TableHead>버전명</TableHead>
+                  <TableHead>수정인명</TableHead>
+                  <TableHead>작업유형</TableHead>
                   <TableHead>상세</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    <TableCell colSpan={4} className="text-center text-muted-foreground">
                       기록이 없습니다.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  data.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell className="text-xs whitespace-nowrap">{formatDate(row.createdAt)}</TableCell>
-                      <TableCell className="text-sm">{row.userId}</TableCell>
-                      <TableCell className="text-sm">{row.actionLabel}</TableCell>
-                      <TableCell className="text-xs font-mono">{row.entityId ?? "-"}</TableCell>
-                      <TableCell className="text-xs max-w-[200px] truncate" title={row.details ?? ""}>
-                        {row.details ?? "-"}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  data.map((row) => {
+                    const isExpanded = expandedIds.has(row.id);
+                    return (
+                      <Fragment key={row.id}>
+                        <TableRow>
+                          <TableCell className="text-sm font-medium">{row.versionName}</TableCell>
+                          <TableCell className="text-sm">{row.userId}</TableCell>
+                          <TableCell
+                            className="text-sm cursor-pointer select-none hover:bg-muted/50 align-middle"
+                            onClick={() => toggleDetail(row.id)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                toggleDetail(row.id);
+                              }
+                            }}
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              {row.workType}
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4 shrink-0" aria-hidden />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
+                              )}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-sm max-w-[320px] truncate" title={row.detail}>
+                            {row.detail}
+                          </TableCell>
+                        </TableRow>
+                        {isExpanded && (
+                          <TableRow className="bg-muted/20 hover:bg-muted/20">
+                            <TableCell colSpan={4} className="p-3 text-sm border-t border-border/50">
+                              <div className="font-medium text-muted-foreground mb-1">상세 내용</div>
+                              <div className="whitespace-pre-wrap break-words">{row.detail}</div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

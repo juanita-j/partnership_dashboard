@@ -22,9 +22,9 @@ export default function DashboardLoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: id.trim(), password }),
       });
-      const data = await res.json().catch(() => ({}));
+      await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "ID 또는 비밀번호가 일치하지 않습니다.");
+        setError("아이디나 비밀번호가 잘못되었습니다.");
         return;
       }
       if (typeof window !== "undefined") {
