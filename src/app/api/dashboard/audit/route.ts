@@ -143,3 +143,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+/** DELETE: 업데이트 이력 전체 삭제 */
+export async function DELETE() {
+  try {
+    const result = await prisma.dashboardAuditLog.deleteMany({});
+    return NextResponse.json({ ok: true, deleted: result.count });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}

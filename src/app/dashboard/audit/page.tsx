@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { stripCompanySuffixForDisplay } from "@/lib/company-display";
+import { toast } from "sonner";
 
 type AuditRow = {
   id: string;
@@ -33,6 +34,7 @@ export default function AuditPage() {
   const [userIdFilter, setUserIdFilter] = useState("");
   const [page, setPage] = useState(1);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   const toggleDetail = (id: string) => {
     setExpandedIds((prev) => {
@@ -206,6 +208,25 @@ export default function AuditPage() {
     );
   };
 
+  const handleDeleteAll = async () => {
+    if (!window.confirm("업데이트 이력을 모두 삭제할까요? 이 작업은 되돌릴 수 없습니다.")) return;
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/dashboard/audit", { method: "DELETE" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(json?.error ?? "삭제에 실패했습니다.");
+        return;
+      }
+      toast.success(`삭제 완료 (${json.deleted ?? 0}건)`);
+      load();
+    } catch {
+      toast.error("요청에 실패했습니다.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <h1 className="text-base font-bold">업데이트 이력</h1>
@@ -218,6 +239,9 @@ export default function AuditPage() {
         />
         <Button size="sm" variant="outline" onClick={() => setPage(1)} disabled={loading}>
           조회
+        </Button>
+        <Button size="sm" variant="destructive" onClick={handleDeleteAll} disabled={deleting || loading}>
+          {deleting ? "삭제 중..." : "전체 삭제"}
         </Button>
       </div>
       {loading ? (

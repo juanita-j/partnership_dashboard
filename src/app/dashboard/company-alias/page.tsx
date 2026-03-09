@@ -183,8 +183,8 @@ export default function CompanyAliasPage() {
         )}
       </div>
       <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
-        <li>엑셀파일로 업로드/직접 입력한 회사명 중 &apos;별칭&apos;에 해당되는 회사명이 &apos;표준명&apos;으로 자동 변환됩니다.</li>
-        <li>&apos;회사명 통일&apos; 버튼을 통해 같은 이메일 도메인(@)을 가지고 있으나 회사명이 다른 파트너는 하나의 회사명으로 통일합니다. (한국 회사명은 한국어로, 글로벌 회사명은 알파벳 표기)</li>
+        <li>&apos;회사명 통일&apos; 버튼을 눌러 같은 이메일 도메인(@)을 가지고 있는 파트너들은 하나의 회사명으로 통일합니다. (한국 회사명은 한국어로, 글로벌 회사명은 알파벳 표기)</li>
+        <li>&apos;매핑 추가&apos; 버튼을 눌러 직접 회사명 매핑 조건 설정도 가능합니다. (&apos;별칭&apos;에 해당되는 회사명이 &apos;표준명&apos;으로 자동 변환)</li>
       </ul>
       {loading ? (
         <div className="py-8 text-center text-muted-foreground">로딩 중...</div>
