@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export default function DashboardLoginPage() {
   const router = useRouter();
@@ -37,34 +36,31 @@ export default function DashboardLoginPage() {
   };
 
   return (
-    <div className="max-w-sm mx-auto mt-16 p-6 rounded-lg border bg-card shadow-sm">
-      <h1 className="text-lg font-semibold mb-1">대시보드 접속</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        비밀번호를 입력한 뒤 접속 버튼을 누르세요.
-      </p>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="password">비밀번호</Label>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-sm space-y-6">
+        <h1 className="text-xl font-semibold text-center">
+          네이버 파트너십 파트너사DB 대시보드
+        </h1>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            id="password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="비밀번호 입력"
+            placeholder="비밀번호를 입력하세요"
             className="w-full"
             autoFocus
             disabled={loading}
           />
-        </div>
-        {error && (
-          <p className="text-sm text-destructive" role="alert">
-            {error}
-          </p>
-        )}
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "확인 중..." : "접속"}
-        </Button>
-      </form>
+          {error && (
+            <p className="text-sm text-destructive text-center" role="alert">
+              {error}
+            </p>
+          )}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "확인 중..." : "로그인"}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

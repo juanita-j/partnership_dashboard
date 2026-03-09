@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30, // 30일
+    // maxAge 미설정 → 세션 쿠키. 브라우저(탭)를 모두 닫았다가 다시 접속하면 삭제되어 비밀번호 입력 화면이 다시 뜸.
   });
   return res;
 }

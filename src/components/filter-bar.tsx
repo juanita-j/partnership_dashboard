@@ -118,7 +118,7 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
           />
         </div>
         <div className="flex items-end pb-0.5">
-          <Button size="sm" onClick={onRefresh} className="h-7 px-2 text-xs">
+          <Button size="sm" onClick={onRefresh} className="h-9 px-3 text-sm">
             적용
           </Button>
         </div>
