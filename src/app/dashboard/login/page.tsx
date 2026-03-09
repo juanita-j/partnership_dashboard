@@ -52,7 +52,7 @@ export default function DashboardLoginPage() {
             autoComplete="username"
             value={id}
             onChange={(e) => setId(e.target.value)}
-            placeholder="이메일 주소 (ID)"
+            placeholder="이메일 주소 (ID) 입력"
             className="w-full"
             disabled={loading}
           />
@@ -61,7 +61,7 @@ export default function DashboardLoginPage() {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="비밀번호를 입력하세요"
+            placeholder="비밀번호 입력"
             className="w-full"
             disabled={loading}
           />

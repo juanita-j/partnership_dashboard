@@ -6,6 +6,53 @@ import { getDashboardUserId, logAudit } from "@/lib/audit";
 
 const YEARS = [2023, 2024, 2025];
 
+const FIELD_LABELS: Record<string, string> = {
+  name: "이름",
+  companyNormalized: "회사",
+  phone: "휴대폰",
+  department: "부서",
+  title: "직함",
+  email: "전자 메일",
+  workPhone: "근무처 전화",
+  workFax: "근무처 팩스",
+  address: "근무지 주소",
+  employmentStatus: "재직상태",
+  businessCardDateRaw: "명함 등록일",
+  history: "히스토리",
+};
+
+function empty(v: unknown): string {
+  if (v == null || v === "") return "";
+  return String(v).trim();
+}
+
+/** 변경된 필드만 읽기 쉬운 문구로 반환 (이력 상세용) */
+function buildUpdateChanges(
+  existing: Record<string, unknown>,
+  updated: Record<string, unknown>,
+  payloadKeys: string[]
+): string[] {
+  const changes: string[] = [];
+  for (const key of payloadKeys) {
+    const label = FIELD_LABELS[key] ?? key;
+    const oldVal = empty(existing[key]);
+    const newVal = empty(updated[key]);
+    if (oldVal === newVal) continue;
+    if (key === "history") {
+      changes.push("히스토리 변경");
+    } else if (label === "이름") {
+      changes.push(`${label} ${oldVal || "(비어있음)"} → ${newVal || "(비어있음)"}`);
+    } else if (label === "회사") {
+      changes.push(oldVal ? `회사 ${oldVal} → ${newVal}` : `회사 ${newVal}`);
+    } else if (["휴대폰", "부서", "직함", "재직상태"].includes(label)) {
+      changes.push(oldVal ? `${label} ${oldVal} → ${newVal}` : `${label} ${newVal}`);
+    } else {
+      changes.push(newVal ? `${label} 변경` : `${label} 삭제`);
+    }
+  }
+  return changes;
+}
+
 function toEventsByYear(
   events: {
     year: number;
@@ -105,6 +152,16 @@ export async function PATCH(
       if (!partner) return NextResponse.json({ error: "Not found" }, { status: 404 });
       return NextResponse.json({ ...partner, eventsByYear: toEventsByYear(partner.yearlyEvents) });
     }
+    const existing = await prisma.partner.findUnique({ where: { id } });
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (updatePayload.companyNormalized !== undefined) {
+      const oldCompany = (existing.companyNormalized ?? "").trim();
+      const newCompany = (updatePayload.companyNormalized as string ?? "").trim();
+      if (oldCompany && oldCompany !== newCompany) {
+        const base = (updatePayload.history ?? existing.history ?? "").trim();
+        (updatePayload as Record<string, unknown>).history = base + (base ? "\n" : "") + "ex-" + oldCompany;
+      }
+    }
     const partner = await prisma.partner.update({
       where: { id },
       data: updatePayload as never,
@@ -112,8 +169,18 @@ export async function PATCH(
     });
     const userId = getDashboardUserId(req);
     if (userId) {
-      const detail = `회사: ${partner.companyNormalized ?? ""}, 이름: ${partner.name}`.trim();
-      await logAudit(userId, "partner_update", null, detail || "인라인 편집");
+      const payloadKeys = Object.keys(updatePayload) as string[];
+      const changes = buildUpdateChanges(
+        existing as unknown as Record<string, unknown>,
+        partner as unknown as Record<string, unknown>,
+        payloadKeys
+      );
+      const summary = `회사: ${partner.companyNormalized ?? ""}, 이름: ${partner.name}`.trim();
+      const detail =
+        changes.length > 0
+          ? JSON.stringify({ summary, changes })
+          : summary || "인라인 편집";
+      await logAudit(userId, "partner_update", null, detail);
     }
     return NextResponse.json({ ...partner, eventsByYear: toEventsByYear(partner.yearlyEvents) });
   } catch (e) {
@@ -151,6 +218,16 @@ export async function PUT(
     if (d.employmentUpdatedAtRaw !== undefined) updatePayload.employmentUpdatedAtRaw = d.employmentUpdatedAtRaw;
     if (d.history !== undefined) updatePayload.history = d.history;
 
+    const existing = await prisma.partner.findUnique({ where: { id } });
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (updatePayload.companyNormalized !== undefined) {
+      const oldCompany = (existing.companyNormalized ?? "").trim();
+      const newCompany = (updatePayload.companyNormalized as string ?? "").trim();
+      if (oldCompany && oldCompany !== newCompany) {
+        const base = (updatePayload.history ?? existing.history ?? "").trim();
+        (updatePayload as Record<string, unknown>).history = base + (base ? "\n" : "") + "ex-" + oldCompany;
+      }
+    }
     const partner = await prisma.partner.update({
       where: { id },
       data: updatePayload as never,
@@ -158,8 +235,18 @@ export async function PUT(
     });
     const userId = getDashboardUserId(req);
     if (userId) {
-      const detail = `회사: ${partner.companyNormalized ?? ""}, 이름: ${partner.name}`.trim();
-      await logAudit(userId, "partner_update", null, detail || "전체 수정");
+      const payloadKeys = Object.keys(updatePayload) as string[];
+      const changes = buildUpdateChanges(
+        existing as unknown as Record<string, unknown>,
+        partner as unknown as Record<string, unknown>,
+        payloadKeys
+      );
+      const summary = `회사: ${partner.companyNormalized ?? ""}, 이름: ${partner.name}`.trim();
+      const detail =
+        changes.length > 0
+          ? JSON.stringify({ summary, changes })
+          : summary || "전체 수정";
+      await logAudit(userId, "partner_update", null, detail);
     }
     return NextResponse.json({ ...partner, eventsByYear: toEventsByYear(partner.yearlyEvents) });
   } catch (e) {

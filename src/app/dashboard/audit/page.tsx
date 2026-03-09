@@ -74,7 +74,7 @@ export default function AuditPage() {
     }
   };
 
-  /** "회사: A, 이름: B" 형태를 "이름: B, 회사: A"로 파싱해 반환. 없으면 원문 */
+  /** "회사: A, 이름: B" 형태 파싱 */
   const parseCompanyName = (line: string): { name?: string; company?: string } => {
     const nameMatch = line.match(/이름:\s*([^,]+)/);
     const companyMatch = line.match(/회사:\s*([^,]+)/);
@@ -84,16 +84,18 @@ export default function AuditPage() {
     };
   };
 
-  /** 상세 한 줄을 "파트너 삭제 (이름: xxx, 회사: xxx)" 형태로 포맷. 회사명은 맨 뒤 (주)·주식회사 제거 후 표시 */
-  const formatDetailLine = (category: string, dataLine: string): string => {
-    const { name, company } = parseCompanyName(dataLine);
-    if (name !== undefined || company !== undefined) {
-      const parts = [];
-      if (name !== undefined) parts.push(`이름: ${name}`);
-      if (company !== undefined) parts.push(`회사: ${stripCompanySuffixForDisplay(company)}`);
-      return `${category} (${parts.join(", ")})`;
+  /** 상세 항목이 JSON 형태( summary + changes )인지 확인 */
+  const parseDetailJson = (line: string): { summary: string; changes: string[] } | null => {
+    const t = line.trim();
+    if (!t.startsWith("{")) return null;
+    try {
+      const o = JSON.parse(t) as { summary?: string; changes?: string[] };
+      if (o && (o.summary != null || (Array.isArray(o.changes) && o.changes.length > 0)))
+        return { summary: o.summary ?? "", changes: Array.isArray(o.changes) ? o.changes : [] };
+    } catch {
+      return null;
     }
-    return dataLine || category;
+    return null;
   };
 
   /** 상세 항목에서 유형과 데이터 부분 분리 (토글 열렸을 때 그룹별 표시용) */
@@ -105,6 +107,7 @@ export default function AuditPage() {
       if (t.startsWith("파트너 삭제")) return "파트너 삭제";
       if (t.startsWith("파트너 추가")) return "파트너 추가";
       if (t.startsWith("신규") || t.includes("건 추가") || t.includes("건 수정")) return "엑셀파일 업로드";
+      if (parseDetailJson(t)) return "파트너 수정";
       if (t.startsWith("회사:") || t.includes("회사:") || t === "파트너 수정") return "파트너 수정";
       return "기타";
     };
@@ -121,6 +124,71 @@ export default function AuditPage() {
       groups[cat].push(getDataPart(item, cat));
     }
     return order.filter((cat) => groups[cat]?.length).map((cat) => ({ category: cat, lines: groups[cat]! }));
+  };
+
+  /** 한 줄 상세를 엑셀 미리보기 스타일 카드로 렌더 (이름/회사 + 변경 항목) */
+  const renderDetailLine = (category: string, dataLine: string) => {
+    const json = parseDetailJson(dataLine);
+    if (json) {
+      const { name, company } = parseCompanyName(json.summary);
+      const displayName = name ?? "(이름없음)";
+      const displayCompany = company != null ? stripCompanySuffixForDisplay(company) : "";
+      return (
+        <div className="rounded border border-border bg-card p-3 text-sm">
+          <p className="font-medium text-foreground">
+            {category}: {displayCompany ? `${displayCompany} · ${displayName}` : displayName}
+          </p>
+          {json.changes.length > 0 && (
+            <p className="mt-1.5 text-muted-foreground">
+              <span className="font-medium text-foreground/80">수정 항목: </span>
+              {json.changes.map((c, j) => (
+                <span key={j}>
+                  {j > 0 && " · "}
+                  {c}
+                </span>
+              ))}
+            </p>
+          )}
+        </div>
+      );
+    }
+    if (category === "파트너 삭제" || category === "파트너 추가") {
+      const { name, company } = parseCompanyName(dataLine);
+      const parts = [];
+      if (name != null) parts.push(`이름: ${name}`);
+      if (company != null) parts.push(`회사: ${stripCompanySuffixForDisplay(company)}`);
+      const sub = parts.length ? ` (${parts.join(", ")})` : "";
+      return (
+        <div className="rounded border border-border bg-card p-3 text-sm">
+          <p className="font-medium text-foreground">{category}{sub}</p>
+        </div>
+      );
+    }
+    if (category === "엑셀파일 업로드") {
+      return (
+        <div className="rounded border border-border bg-card p-3 text-sm">
+          <p className="font-medium text-foreground">{dataLine}</p>
+        </div>
+      );
+    }
+    if (category === "파트너 수정" && dataLine.trim()) {
+      const { name, company } = parseCompanyName(dataLine);
+      const parts = [];
+      if (name != null) parts.push(`이름: ${name}`);
+      if (company != null) parts.push(`회사: ${stripCompanySuffixForDisplay(company)}`);
+      return (
+        <div className="rounded border border-border bg-card p-3 text-sm">
+          <p className="font-medium text-foreground">
+            {parts.length ? `회사/이름: ${parts.join(", ")}` : dataLine}
+          </p>
+        </div>
+      );
+    }
+    return (
+      <div className="rounded border border-border bg-card p-3 text-sm text-muted-foreground">
+        {dataLine || category}
+      </div>
+    );
   };
 
   return (
@@ -200,18 +268,16 @@ export default function AuditPage() {
                                 <div className="space-y-4">
                                   {groupDetailItems(row.detailItems).map(({ category, lines }) => (
                                     <div key={category}>
-                                      <div className="font-medium text-foreground mb-1">
+                                      <div className="font-medium text-foreground mb-2">
                                         {category} ({lines.length}건)
                                       </div>
-                                      <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
+                                      <div className="grid gap-2 sm:grid-cols-2">
                                         {lines.map((line, i) => (
-                                          <li key={i} className="break-words">
-                                            {["파트너 삭제", "파트너 추가", "파트너 수정"].includes(category)
-                                              ? formatDetailLine(category, line)
-                                              : line}
-                                          </li>
+                                          <Fragment key={`${category}-${i}`}>
+                                            {renderDetailLine(category, line)}
+                                          </Fragment>
                                         ))}
-                                      </ul>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
