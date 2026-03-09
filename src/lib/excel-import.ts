@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { normalizeCompany, upperLatin } from "./company";
+import { normalizeCompany, stripCompanySuffix, upperLatin } from "./company";
 
 /** 요구사항 고정 헤더 순서 (명함 등록일 다음에 히스토리) */
 export const EXCEL_HEADERS = [
@@ -20,6 +20,8 @@ export const EXCEL_HEADERS = [
   "DAN24 초청인",
   "DAN25 초청여부",
   "DAN25 초청인",
+  "DAN26 초청여부",
+  "DAN26 초청인",
   "24년 선물수신인",
   "24년 선물품목",
   "24년 선물발송개수",
@@ -28,6 +30,10 @@ export const EXCEL_HEADERS = [
   "25년 선물품목",
   "25년 선물발송개수",
   "25년 선물발송인",
+  "26년 선물수신인",
+  "26년 선물품목",
+  "26년 선물발송개수",
+  "26년 선물발송인",
 ] as const;
 
 const HEADER_TO_KEY: Record<string, string> = {
@@ -48,6 +54,8 @@ const HEADER_TO_KEY: Record<string, string> = {
   "DAN24 초청인": "2024_danInviter",
   "DAN25 초청여부": "2025_danInvitedRaw",
   "DAN25 초청인": "2025_danInviter",
+  "DAN26 초청여부": "2026_danInvitedRaw",
+  "DAN26 초청인": "2026_danInviter",
   "24년 선물수신인": "2024_giftRecipient",
   "24년 선물품목": "2024_giftItem",
   "24년 선물발송개수": "2024_giftQtyRaw",
@@ -56,6 +64,10 @@ const HEADER_TO_KEY: Record<string, string> = {
   "25년 선물품목": "2025_giftItem",
   "25년 선물발송개수": "2025_giftQtyRaw",
   "25년 선물발송인": "2025_giftSender",
+  "26년 선물수신인": "2026_giftRecipient",
+  "26년 선물품목": "2026_giftItem",
+  "26년 선물발송개수": "2026_giftQtyRaw",
+  "26년 선물발송인": "2026_giftSender",
 };
 
 function toYear(nn: string): number {
@@ -152,6 +164,15 @@ export function parseSheet(buffer: ArrayBuffer): ParsedRow[] {
     const key = mapHeader(String(h ?? ""));
     if (key) colMap[i] = key;
   });
+  // L열(인덱스 11) 오른쪽 첫 행에 '26'이 있으면 해당 열을 2026년 DAN 초청여부로 인식
+  const L_COL_INDEX = 11;
+  for (let i = L_COL_INDEX + 1; i < rawHeaders.length; i++) {
+    const cell = String(rawHeaders[i] ?? "").trim();
+    if (cell === "26") {
+      colMap[i] = "2026_danInvitedRaw";
+      break;
+    }
+  }
   const rows: ParsedRow[] = [];
   for (let r = 1; r < data.length; r++) {
     const rawRow = data[r];
@@ -190,8 +211,9 @@ export async function normalizeParsedRows(rows: ParsedRow[]): Promise<ParsedRow[
     const n = { ...row };
     const companyRaw = (row.company ?? "").trim() || "";
     if (companyRaw || row.email) {
-      const { normalized } = await normalizeCompany(companyRaw, row.email ?? undefined);
-      n.companyNormalized = normalized || upperLatin(companyRaw);
+      const cleaned = stripCompanySuffix(companyRaw);
+      const { normalized } = await normalizeCompany(cleaned, row.email ?? undefined);
+      n.companyNormalized = normalized || upperLatin(cleaned);
     }
     out.push(n);
   }

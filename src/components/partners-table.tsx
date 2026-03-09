@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { FilterState, OptionalColumnId } from "@/app/dashboard/types";
 import { FIXED_COLUMN_IDS, OPTIONAL_COLUMN_IDS, EMPLOYMENT_STATUS_VALUES } from "@/app/dashboard/types";
+import { stripCompanySuffixForDisplay } from "@/lib/company-display";
 import { toast } from "sonner";
 
 type PartnerRow = {
@@ -109,7 +110,7 @@ const OPTIONAL_HEADERS: { id: OptionalColumnId; label: string }[] = [
   { id: "giftSender", label: "선물발송인" },
 ];
 
-const DAN_INVITED_COL_IDS = ["dan23Invited", "dan24Invited", "dan25Invited"] as const;
+const DAN_INVITED_COL_IDS = ["dan23Invited", "dan24Invited", "dan25Invited", "dan26Invited"] as const;
 function buildDanHeaders(eventYears: number[]): { id: string; label: string }[] {
   return eventYears.flatMap((y) => {
     const yy = y % 100;
@@ -207,7 +208,7 @@ function getCellValue(p: PartnerRow, colId: string): string {
       return n === "(이름없음)" ? "" : n;
     }
     case "company":
-      return p.companyNormalized ?? "";
+      return stripCompanySuffixForDisplay(p.companyNormalized ?? "");
     case "phone":
       return p.phone ?? "";
     case "department":

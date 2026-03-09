@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { stripCompanySuffixForDisplay } from "@/lib/company-display";
 
 type AuditRow = {
   id: string;
@@ -73,6 +74,28 @@ export default function AuditPage() {
     }
   };
 
+  /** "회사: A, 이름: B" 형태를 "이름: B, 회사: A"로 파싱해 반환. 없으면 원문 */
+  const parseCompanyName = (line: string): { name?: string; company?: string } => {
+    const nameMatch = line.match(/이름:\s*([^,]+)/);
+    const companyMatch = line.match(/회사:\s*([^,]+)/);
+    return {
+      name: nameMatch ? nameMatch[1].trim() : undefined,
+      company: companyMatch ? companyMatch[1].trim() : undefined,
+    };
+  };
+
+  /** 상세 한 줄을 "파트너 삭제 (이름: xxx, 회사: xxx)" 형태로 포맷. 회사명은 맨 뒤 (주)·주식회사 제거 후 표시 */
+  const formatDetailLine = (category: string, dataLine: string): string => {
+    const { name, company } = parseCompanyName(dataLine);
+    if (name !== undefined || company !== undefined) {
+      const parts = [];
+      if (name !== undefined) parts.push(`이름: ${name}`);
+      if (company !== undefined) parts.push(`회사: ${stripCompanySuffixForDisplay(company)}`);
+      return `${category} (${parts.join(", ")})`;
+    }
+    return dataLine || category;
+  };
+
   /** 상세 항목에서 유형과 데이터 부분 분리 (토글 열렸을 때 그룹별 표시용) */
   const groupDetailItems = (items: string[]) => {
     const groups: Record<string, string[]> = {};
@@ -89,6 +112,7 @@ export default function AuditPage() {
       const t = s.trim();
       if (cat === "파트너 삭제" && t.startsWith("파트너 삭제:")) return t.slice("파트너 삭제:".length).trim();
       if (cat === "파트너 추가" && t.startsWith("파트너 추가:")) return t.slice("파트너 추가:".length).trim();
+      if (cat === "파트너 수정") return t;
       return t;
     };
     for (const item of items) {
@@ -182,7 +206,9 @@ export default function AuditPage() {
                                       <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
                                         {lines.map((line, i) => (
                                           <li key={i} className="break-words">
-                                            {line}
+                                            {["파트너 삭제", "파트너 추가", "파트너 수정"].includes(category)
+                                              ? formatDetailLine(category, line)
+                                              : line}
                                           </li>
                                         ))}
                                       </ul>

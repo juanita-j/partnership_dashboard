@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { EMPLOYMENT_STATUS_VALUES } from "@/app/dashboard/types";
+import { stripCompanySuffixForDisplay } from "@/lib/company-display";
 
 type PartnerDetail = {
   id: string;
@@ -110,7 +111,7 @@ export function PartnerDetailSheet({
           status: data.status ?? "active",
           name: data.name ?? "",
           phone: data.phone ?? "",
-          companyNormalized: data.companyNormalized ?? "",
+          companyNormalized: stripCompanySuffixForDisplay(data.companyNormalized ?? ""),
           department: data.department ?? "",
           title: data.title ?? "",
           email: data.email ?? "",

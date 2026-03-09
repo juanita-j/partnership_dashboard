@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 const SESSION_KEY = "dashboard_auth";
 
@@ -46,6 +47,13 @@ export function DashboardLayoutClient({
     return <>{children}</>;
   }
 
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(SESSION_KEY);
+    }
+    router.replace("/dashboard/login");
+  };
+
   if (!checked) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -70,6 +78,9 @@ export function DashboardLayoutClient({
             </Link>
           </nav>
         </div>
+        <Button variant="outline" size="sm" onClick={handleLogout} className="shrink-0 border-gray-500 text-gray-200 hover:bg-gray-700 hover:text-white">
+          로그아웃
+        </Button>
       </header>
       <main className="flex-1 p-4">
         {children}

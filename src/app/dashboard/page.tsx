@@ -105,7 +105,17 @@ function DashboardContent() {
     [eventYears]
   );
 
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+  const refresh = useCallback(() => {
+    setRefreshKey((k) => k + 1);
+    fetch("/api/event-years")
+      .then((r) => r.json())
+      .then((data: { years?: number[] }) => {
+        if (Array.isArray(data.years) && data.years.length > 0) {
+          setEventYears([...data.years].sort((a, b) => a - b));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const exportUrl =
     `/api/export/xlsx?${filtersToSearchParams(filters, eventYears).toString()}&columns=${encodeURIComponent(JSON.stringify(filters.showColumns))}`;

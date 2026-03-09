@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { MergeDiffItem } from "@/lib/excel-import";
 import { getDashboardUserId, logAudit } from "@/lib/audit";
+import { stripCompanySuffix, upperLatin } from "@/lib/company";
 
 /** Merge: 비어있지 않은 컬럼만 업데이트. history에 변경 로그 append */
 export async function POST(req: NextRequest) {
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
             status: "active",
             name: p.name ?? "",
             phone: p.phone ?? "",
-            companyNormalized: p.companyNormalized ?? p.company ?? "",
+            companyNormalized: upperLatin(stripCompanySuffix((p.companyNormalized ?? p.company ?? "").trim())),
             department: (p.department ?? "").trim() || null,
             title: (p.title ?? "").trim() || null,
             email: (p.email ?? "").trim() || null,
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
         }
         if (p.companyNormalized != null && (p.companyNormalized ?? "").trim() !== "" && (p.companyNormalized ?? "").trim() !== (existing.companyNormalized ?? "").trim()) {
           const oldCompany = (existing.companyNormalized ?? "").trim();
-          updates.companyNormalized = p.companyNormalized?.trim() ?? "";
+          updates.companyNormalized = upperLatin(stripCompanySuffix((p.companyNormalized ?? "").trim()));
           if (oldCompany) historyParts.push(`ex-${oldCompany}`);
         }
         if (p.department !== undefined && (p.department ?? "").trim() !== (existing.department ?? "").trim()) {

@@ -30,6 +30,8 @@ export const DAN_AUTO_COLUMNS = [
   "dan24Inviter",
   "dan25Invited",
   "dan25Inviter",
+  "dan26Invited",
+  "dan26Inviter",
 ] as const;
 
 /** 필터 활성화 시 자동 노출되는 선물 컬럼 (연도는 EVENT_YEARS 기반 동적 생성) */
@@ -42,6 +44,10 @@ export const GIFT_AUTO_COLUMNS = [
   "gift25Item",
   "gift25Qty",
   "gift25Sender",
+  "gift26Recipient",
+  "gift26Item",
+  "gift26Qty",
+  "gift26Sender",
 ] as const;
 
 export type OptionalColumnId = (typeof OPTIONAL_COLUMN_IDS)[number];
