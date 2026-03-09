@@ -158,7 +158,7 @@ export async function PATCH(
       const oldCompany = (existing.companyNormalized ?? "").trim();
       const newCompany = (updatePayload.companyNormalized as string ?? "").trim();
       if (oldCompany && oldCompany !== newCompany) {
-        const base = (updatePayload.history ?? existing.history ?? "").trim();
+        const base = String(updatePayload.history ?? existing.history ?? "").trim();
         (updatePayload as Record<string, unknown>).history = base + (base ? "\n" : "") + "ex-" + oldCompany;
       }
     }
@@ -224,7 +224,7 @@ export async function PUT(
       const oldCompany = (existing.companyNormalized ?? "").trim();
       const newCompany = (updatePayload.companyNormalized as string ?? "").trim();
       if (oldCompany && oldCompany !== newCompany) {
-        const base = (updatePayload.history ?? existing.history ?? "").trim();
+        const base = String(updatePayload.history ?? existing.history ?? "").trim();
         (updatePayload as Record<string, unknown>).history = base + (base ? "\n" : "") + "ex-" + oldCompany;
       }
     }
