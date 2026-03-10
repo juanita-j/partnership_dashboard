@@ -74,22 +74,33 @@ export function ExcelUploadDialog({ open, onClose, onApplied }: ExcelUploadDialo
       return;
     }
     setApplying(true);
+    const CHUNK_SIZE = 80;
+    let totalCreated = 0;
+    let totalUpdated = 0;
     try {
-      const res = await fetch("/api/import/apply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ diff }),
-      });
-      if (!res.ok) throw new Error("적용 실패");
-      const data = await res.json();
-      toast.success(`적용 완료: 신규 ${data.created ?? 0}건, 수정 ${data.updated ?? 0}건`);
+      for (let i = 0; i < diff.length; i += CHUNK_SIZE) {
+        const chunk = diff.slice(i, i + CHUNK_SIZE);
+        const res = await fetch("/api/import/apply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ diff: chunk }),
+        });
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error((errBody?.error as string) || "적용 실패");
+        }
+        const data = await res.json();
+        totalCreated += data.created ?? 0;
+        totalUpdated += data.updated ?? 0;
+      }
+      toast.success(`적용 완료: 신규 ${totalCreated}건, 수정 ${totalUpdated}건`);
       setDiff(null);
       setFile(null);
       if (inputRef.current) inputRef.current.value = "";
       onApplied();
       onClose();
-    } catch {
-      toast.error("적용에 실패했습니다.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "적용에 실패했습니다.");
     } finally {
       setApplying(false);
     }

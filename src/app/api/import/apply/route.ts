@@ -4,6 +4,9 @@ import type { MergeDiffItem } from "@/lib/excel-import";
 import { getDashboardUserId, logAudit } from "@/lib/audit";
 import { stripCompanySuffix, upperLatin } from "@/lib/company";
 
+/** 대용량 엑셀 적용 시 타임아웃 방지 (Vercel 등) */
+export const maxDuration = 60;
+
 /** Merge: 비어있지 않은 컬럼만 업데이트. history에 변경 로그 append */
 export async function POST(req: NextRequest) {
   try {
