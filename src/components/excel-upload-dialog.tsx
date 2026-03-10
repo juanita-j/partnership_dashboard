@@ -74,7 +74,8 @@ export function ExcelUploadDialog({ open, onClose, onApplied }: ExcelUploadDialo
       return;
     }
     setApplying(true);
-    const CHUNK_SIZE = 80;
+    /** Vercel 10s 제한에 맞추기 위해 청크당 행 수 축소 (요청당 DB 작업 수 감소) */
+    const CHUNK_SIZE = 25;
     let totalCreated = 0;
     let totalUpdated = 0;
     try {
