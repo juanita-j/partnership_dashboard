@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -83,6 +83,29 @@ function buildQuery(f: FilterState, page: number, eventYears: number[], sortBy: 
   if (f.giftSender) p.set("giftSender", f.giftSender);
   p.set("page", String(page));
   p.set("limit", "50");
+  if (sortBy) p.set("sortBy", sortBy);
+  p.set("sortOrder", sortOrder);
+  return p.toString();
+}
+
+/** 현재 필터 기준 전체 ID 조회용 쿼리 (idsOnly=true) */
+function buildIdsOnlyQuery(f: FilterState, eventYears: number[], sortBy: string, sortOrder: "asc" | "desc"): string {
+  const p = new URLSearchParams();
+  if (f.employmentStatus) p.set("employmentStatus", f.employmentStatus);
+  if (f.name) p.set("name", f.name);
+  if (f.company) p.set("company", f.company);
+  if (f.department) p.set("department", f.department);
+  if (f.title) p.set("title", f.title);
+  for (const year of eventYears) {
+    const yy = year % 100;
+    if (f[`dan${yy}`]) p.set(`dan${yy}`, "true");
+    if (f[`dan${yy}Yn`]) p.set(`dan${yy}Yn`, String(f[`dan${yy}Yn`]));
+    if (f[`gift${year}`]) p.set(`gift${year}`, "true");
+    if (f[`gift${yy}Yn`]) p.set(`gift${yy}Yn`, String(f[`gift${yy}Yn`]));
+  }
+  if (f.inviter) p.set("inviter", f.inviter);
+  if (f.giftSender) p.set("giftSender", f.giftSender);
+  p.set("idsOnly", "true");
   if (sortBy) p.set("sortBy", sortBy);
   p.set("sortOrder", sortOrder);
   return p.toString();
@@ -239,6 +262,24 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
   const [sortBy, setSortBy] = useState<string>("updatedAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectAllOpen, setSelectAllOpen] = useState(false);
+  const [selectAllPagesLoading, setSelectAllPagesLoading] = useState(false);
+  const selectAllTriggerRef = useRef<HTMLButtonElement>(null);
+  const selectAllMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!selectAllOpen) return;
+    const close = (e: MouseEvent) => {
+      if (
+        selectAllTriggerRef.current?.contains(e.target as Node) ||
+        selectAllMenuRef.current?.contains(e.target as Node)
+      )
+        return;
+      setSelectAllOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [selectAllOpen]);
   const [currentPage, setCurrentPage] = useState(1);
 
   const handleSort = (colId: string) => {
@@ -741,17 +782,77 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
       <Table className="text-[13px]">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-10 px-2" onClick={(e) => e.stopPropagation()}>
-              <input
-                type="checkbox"
-                checked={data.length > 0 && selectedIds.size >= data.length}
-                ref={(el) => {
-                  if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < data.length;
-                }}
-                onChange={() => {}}
-                onClick={toggleSelectAll}
-                className="rounded border-input cursor-pointer"
-              />
+            <TableHead className="w-10 px-2 relative" onClick={(e) => e.stopPropagation()}>
+              <button
+                ref={selectAllTriggerRef}
+                type="button"
+                aria-haspopup="true"
+                aria-expanded={selectAllOpen}
+                onClick={() => setSelectAllOpen((o) => !o)}
+                className="flex items-center justify-center w-6 h-6 rounded border border-input bg-background hover:bg-muted cursor-pointer"
+                title="선택 메뉴"
+              >
+                {data.length > 0 && selectedIds.size >= data.length ? (
+                  <span className="text-primary text-xs">✓</span>
+                ) : selectedIds.size > 0 ? (
+                  <span className="text-muted-foreground text-xs">−</span>
+                ) : (
+                  <span className="text-muted-foreground/50 text-xs">▢</span>
+                )}
+              </button>
+              {selectAllOpen && (
+                <div
+                  ref={selectAllMenuRef}
+                  className="absolute left-0 top-full z-20 mt-1 min-w-[120px] rounded-md border border-input bg-popover shadow-md py-1"
+                >
+                  <button
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                    onClick={() => {
+                      setSelectedIds(new Set(data.map((p) => p.id)));
+                      setSelectAllOpen(false);
+                    }}
+                  >
+                    현재 페이지 선택
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
+                    disabled={selectAllPagesLoading}
+                    onClick={async () => {
+                      setSelectAllPagesLoading(true);
+                      try {
+                        const q = buildIdsOnlyQuery(filters, eventYears, sortBy, sortOrder);
+                        const res = await fetch(`/api/partners?${q}`);
+                        if (!res.ok) throw new Error("조회 실패");
+                        const json = await res.json();
+                        const ids = Array.isArray(json.ids) ? json.ids : [];
+                        setSelectedIds(new Set(ids));
+                        setSelectAllOpen(false);
+                        if (ids.length > 0) toast.success(`모든 페이지 ${ids.length}건 선택됨`);
+                      } catch {
+                        toast.error("전체 ID 조회에 실패했습니다.");
+                      } finally {
+                        setSelectAllPagesLoading(false);
+                      }
+                    }}
+                  >
+                    {selectAllPagesLoading ? "조회 중..." : "모든 페이지 선택"}
+                  </button>
+                  {selectedIds.size > 0 && (
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                      onClick={() => {
+                        setSelectedIds(new Set());
+                        setSelectAllOpen(false);
+                      }}
+                    >
+                      선택 해제
+                    </button>
+                  )}
+                </div>
+              )}
             </TableHead>
             {FIXED_HEADERS.map((h) => {
               const sortField = COL_ID_TO_SORT_FIELD[h.id];

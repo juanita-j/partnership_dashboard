@@ -105,6 +105,15 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    if (searchParams.get("idsOnly") === "true") {
+      const rows = await prisma.partner.findMany({
+        where: where as Prisma.PartnerWhereInput,
+        select: { id: true },
+        take: 10000,
+      });
+      return NextResponse.json({ ids: rows.map((r) => r.id) });
+    }
+
     const [partners, total] = await Promise.all([
       prisma.partner.findMany({
         where: where as Prisma.PartnerWhereInput,
