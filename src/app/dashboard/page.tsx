@@ -21,6 +21,9 @@ function filtersFromSearchParams(sp: URLSearchParams, eventYears: number[]): Fil
     company: sp.get("company") ?? "",
     department: sp.get("department") ?? "",
     title: sp.get("title") ?? "",
+    phone: sp.get("phone") ?? "",
+    email: sp.get("email") ?? "",
+    history: sp.get("history") ?? "",
     inviter: sp.get("inviter") ?? "",
     giftSender: sp.get("giftSender") ?? "",
     showColumns: (() => {
@@ -57,6 +60,9 @@ function filtersToSearchParams(f: FilterState, eventYears: number[]): URLSearchP
   if (f.company) p.set("company", f.company);
   if (f.department) p.set("department", f.department);
   if (f.title) p.set("title", f.title);
+  if (f.phone) p.set("phone", f.phone);
+  if (f.email) p.set("email", f.email);
+  if (f.history) p.set("history", f.history);
   if (f.inviter) p.set("inviter", f.inviter);
   if (f.giftSender) p.set("giftSender", f.giftSender);
   if (f.showColumns.length) p.set("showColumns", JSON.stringify(f.showColumns));

@@ -72,6 +72,9 @@ function buildQuery(f: FilterState, page: number, eventYears: number[], sortBy: 
   if (f.company) p.set("company", f.company);
   if (f.department) p.set("department", f.department);
   if (f.title) p.set("title", f.title);
+  if (f.phone) p.set("phone", f.phone);
+  if (f.email) p.set("email", f.email);
+  if (f.history) p.set("history", f.history);
   for (const year of eventYears) {
     const yy = year % 100;
     if (f[`dan${yy}`]) p.set(`dan${yy}`, "true");
@@ -96,6 +99,9 @@ function buildIdsOnlyQuery(f: FilterState, eventYears: number[], sortBy: string,
   if (f.company) p.set("company", f.company);
   if (f.department) p.set("department", f.department);
   if (f.title) p.set("title", f.title);
+  if (f.phone) p.set("phone", f.phone);
+  if (f.email) p.set("email", f.email);
+  if (f.history) p.set("history", f.history);
   for (const year of eventYears) {
     const yy = year % 100;
     if (f[`dan${yy}`]) p.set(`dan${yy}`, "true");

@@ -183,6 +183,9 @@ export async function GET(req: NextRequest) {
     const company = (searchParams.get("company") ?? "").trim();
     const department = (searchParams.get("department") ?? "").trim();
     const title = (searchParams.get("title") ?? "").trim();
+    const phone = (searchParams.get("phone") ?? "").trim();
+    const email = (searchParams.get("email") ?? "").trim();
+    const history = (searchParams.get("history") ?? "").trim();
     const inviter = (searchParams.get("inviter") ?? "").trim();
     const giftSender = (searchParams.get("giftSender") ?? "").trim();
     let showColumns: string[] = [];
@@ -213,6 +216,9 @@ export async function GET(req: NextRequest) {
       if (company) where.companyNormalized = { contains: company, mode: "insensitive" };
       if (department) where.department = { contains: department };
       if (title) where.title = { contains: title };
+      if (phone) where.phone = { contains: phone };
+      if (email) where.email = { contains: email, mode: "insensitive" };
+      if (history) where.history = { contains: history };
       const eventConditions: Record<string, unknown>[] = [];
       for (let year = YEAR_RANGE.min; year <= YEAR_RANGE.max; year++) {
         const yy = year % 100;

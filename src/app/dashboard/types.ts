@@ -66,6 +66,9 @@ export interface FilterState {
   company: string;
   department: string;
   title: string;
+  phone: string;
+  email: string;
+  history: string;
   inviter: string;
   giftSender: string;
   showColumns: OptionalColumnId[];
@@ -81,6 +84,9 @@ export const defaultFilters: FilterState = {
   company: "",
   department: "",
   title: "",
+  phone: "",
+  email: "",
+  history: "",
   inviter: "",
   giftSender: "",
   showColumns: [],
