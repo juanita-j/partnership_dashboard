@@ -40,7 +40,7 @@ async function buildMergeDiff(rows: ParsedRow[]): Promise<MergeDiff> {
     const company = (row.companyNormalized ?? row.company ?? "").trim();
     if (!name && !email && !company) continue;
 
-    // 신규 vs 수정 판단: 고유값 = '이름' + '휴대폰'. 둘 다 일치할 때만 수정으로 간주 (이메일·회사는 매칭에 사용하지 않음)
+    // 신규 vs 수정 판단: 휴대폰 있으면 '이름+휴대폰'만 매칭, 휴대폰 없을 때만 '이름+회사' 매칭. 이름만으로는 매칭 금지.
     let existing: (typeof partners)[number] | null = null;
     let matchKey = "";
     if (name && phone) {
@@ -48,6 +48,15 @@ async function buildMergeDiff(rows: ParsedRow[]): Promise<MergeDiff> {
         (p) => p.name.trim() === name && (p.phone ?? "").trim() === phone
       ) ?? null;
       matchKey = `이름+휴대폰:${name}|${phone}`;
+    } else if (name && company) {
+      // 휴대폰이 비어 있을 때만 예외: 이름+회사로 매칭. 기존 행도 휴대폰 비어 있는 경우만 매칭(동명이인 오매칭 방지)
+      existing = partners.find(
+        (p) =>
+          p.name.trim() === name &&
+          (p.companyNormalized ?? "").trim() === company &&
+          !(p.phone ?? "").trim()
+      ) ?? null;
+      matchKey = `이름+회사:${name}|${company}`;
     }
     const changes: string[] = [];
     if (existing) {

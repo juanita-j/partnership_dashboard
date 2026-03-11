@@ -92,7 +92,11 @@ export async function POST(req: NextRequest) {
         if (p.companyNormalized != null && (p.companyNormalized ?? "").trim() !== "" && (p.companyNormalized ?? "").trim() !== (existing.companyNormalized ?? "").trim()) {
           const oldCompany = (existing.companyNormalized ?? "").trim();
           updates.companyNormalized = upperLatin(stripCompanySuffix((p.companyNormalized ?? "").trim()));
-          if (oldCompany) historyParts.push(`ex-${oldCompany}`);
+          if (oldCompany) {
+            historyParts.push(`ex-${oldCompany}`);
+            const prevHistory = (existing.history ?? "").trim();
+            updates.history = prevHistory === "" ? `ex-${oldCompany}` : `${prevHistory}, ex-${oldCompany}`;
+          }
         }
         if (p.department !== undefined && (p.department ?? "").trim() !== (existing.department ?? "").trim()) {
           updates.department = (p.department ?? "").trim() || null;
@@ -115,7 +119,8 @@ export async function POST(req: NextRequest) {
         // 엑셀의 '히스토리' 셀이 비어 있으면 ExcelImport 문구를 넣지 않음 (해당 셀에 내용이 있을 때만 append)
         const excelHistory = (p.history ?? "").trim();
         if (historyParts.length > 0 && excelHistory !== "") {
-          updates.history = (existing.history ?? "") + "\n" + `${now} ExcelImport: ` + historyParts.join("; ");
+          const baseHistory = updates.history ?? existing.history ?? "";
+          updates.history = baseHistory + "\n" + `${now} ExcelImport: ` + historyParts.join("; ");
         }
         if (Object.keys(updates).length > 0) {
           await prisma.partner.update({
