@@ -66,7 +66,7 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
         FILTER
       </div>
       <div className="rounded-md bg-gray-50/80 p-3 space-y-3">
-        <div className="grid grid-cols-4 sm:grid-cols-6 xl:grid-cols-8 gap-2 items-end">
+        <div className="grid grid-cols-4 sm:grid-cols-6 xl:grid-cols-9 gap-2 items-end">
           <div className="min-w-0">
             <Label className="text-xs">재직상태</Label>
             <select
@@ -108,9 +108,14 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
             <Label className="text-xs">히스토리</Label>
             <Input placeholder="검색" value={filters.history} onChange={(e) => onFiltersChange({ ...filters, history: e.target.value })} className="h-9 w-full px-2 py-1 text-sm mt-0.5" />
           </div>
+          <div className="flex items-end pb-0.5">
+            <Button size="sm" onClick={onRefresh} className="h-9 px-3 text-sm">
+              적용
+            </Button>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Label className="text-xs font-medium shrink-0">DAN초청여부</Label>
+          <Label className="text-xs font-medium shrink-0 w-20">DAN초청여부</Label>
           <div className="flex items-center gap-2 flex-nowrap">
             {eventYears.map((year) => {
               const yy = year % 100;
@@ -135,7 +140,9 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
             <Label className="text-xs text-muted-foreground">초청인</Label>
             <Input placeholder="검색" value={filters.inviter} onChange={(e) => onFiltersChange({ ...filters, inviter: e.target.value })} className="h-9 w-24 rounded-md border border-input bg-background px-2 text-sm" />
           </div>
-          <Label className="text-xs font-medium shrink-0">선물발송여부</Label>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Label className="text-xs font-medium shrink-0 w-20">선물발송여부</Label>
           <div className="flex items-center gap-2 flex-nowrap">
             {eventYears.map((year) => {
               const yy = year % 100;
@@ -160,9 +167,6 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
             <Label className="text-xs text-muted-foreground">선물발송인</Label>
             <Input placeholder="검색" value={filters.giftSender} onChange={(e) => onFiltersChange({ ...filters, giftSender: e.target.value })} className="h-9 w-24 rounded-md border border-input bg-background px-2 text-sm" />
           </div>
-          <Button size="sm" onClick={onRefresh} className="h-9 px-3 text-sm shrink-0">
-            적용
-          </Button>
         </div>
       </div>
 
