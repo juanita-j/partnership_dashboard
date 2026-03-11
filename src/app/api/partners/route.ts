@@ -6,6 +6,8 @@ import { partnerCreateSchema } from "@/lib/validations";
 import { getDashboardUserId, logAudit } from "@/lib/audit";
 import type { Prisma } from "@prisma/client";
 
+type PartnerWithYearlyEvents = Prisma.PartnerGetPayload<{ include: { yearlyEvents: true } }>;
+
 const YEAR_RANGE = { min: 2023, max: 2030 };
 
 function toEventsByYear(
@@ -122,7 +124,7 @@ export async function GET(req: NextRequest) {
     }
 
     const whereInput = where as Prisma.PartnerWhereInput;
-    let partners: Awaited<ReturnType<typeof prisma.partner.findMany>>;
+    let partners: PartnerWithYearlyEvents[];
     let total: number;
     if (orderByField === "companyNormalized") {
       const [countRes, all] = await Promise.all([
