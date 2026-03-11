@@ -94,6 +94,15 @@ export function ExcelUploadDialog({ open, onClose, onApplied }: ExcelUploadDialo
         totalCreated += data.created ?? 0;
         totalUpdated += data.updated ?? 0;
       }
+      try {
+        await fetch("/api/dashboard/audit/log-import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ created: totalCreated, updated: totalUpdated, filename: file?.name ?? "" }),
+        });
+      } catch {
+        // 이력 기록 실패해도 적용 완료는 유지
+      }
       toast.success(`적용 완료: 신규 ${totalCreated}건, 수정 ${totalUpdated}건`);
       setDiff(null);
       setFile(null);

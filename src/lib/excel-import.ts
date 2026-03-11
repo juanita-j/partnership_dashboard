@@ -43,6 +43,7 @@ const HEADER_TO_KEY: Record<string, string> = {
   "부서": "department",
   "직함": "title",
   "전자 메일": "email",
+  "이메일": "email",
   "근무처 전화": "workPhone",
   "근무처 팩스": "workFax",
   "근무지 주소": "address",
@@ -68,6 +69,7 @@ const HEADER_TO_KEY: Record<string, string> = {
   "26년 선물품목": "2026_giftItem",
   "26년 선물발송개수": "2026_giftQtyRaw",
   "26년 선물발송인": "2026_giftSender",
+  "재직상태": "employmentStatus",
 };
 
 function toYear(nn: string): number {
@@ -111,6 +113,7 @@ export interface ParsedRow {
   workFax?: string;
   address?: string;
   businessCardDateRaw?: string;
+  employmentStatus?: string;
   history?: string;
   years?: Record<
     number,

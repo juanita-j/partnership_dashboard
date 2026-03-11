@@ -266,6 +266,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
   const [selectAllPagesLoading, setSelectAllPagesLoading] = useState(false);
   const selectAllTriggerRef = useRef<HTMLButtonElement>(null);
   const selectAllMenuRef = useRef<HTMLDivElement>(null);
+  const lastFetchedQueryRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!selectAllOpen) return;
@@ -330,6 +331,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
       .then((res) => {
         if (res.data) setData(res.data);
         if (res.pagination) setPagination(res.pagination);
+        lastFetchedQueryRef.current = q;
       })
       .catch(() => setData([]))
       .finally(() => setLoading(false));
@@ -745,7 +747,10 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
     return val || "-";
   };
 
-  if (loading) return <div className="py-8 text-center text-muted-foreground">로딩 중...</div>;
+  const currentQuery = buildQuery(filters, currentPage, eventYears, sortBy, sortOrder);
+  if (loading || lastFetchedQueryRef.current !== currentQuery) {
+    return <div className="py-8 text-center text-muted-foreground">로딩 중...</div>;
+  }
 
   const selectedExportUrl =
     selectedIds.size > 0 && typeof window !== "undefined"

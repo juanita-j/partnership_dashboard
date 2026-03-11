@@ -14,13 +14,11 @@ function formatDetail(row: { action: string; details: string | null }): string {
   switch (action) {
     case "import_apply": {
       try {
-        const o = details ? JSON.parse(details) as { created?: number; updated?: number } : {};
+        const o = details ? JSON.parse(details) as { created?: number; updated?: number; filename?: string } : {};
         const created = o.created ?? 0;
-        const updated = o.updated ?? 0;
-        const parts: string[] = [];
-        if (created > 0) parts.push(`신규 ${created}건 추가`);
-        if (updated > 0) parts.push(`${updated}건 수정`);
-        return parts.length ? parts.join(", ") : "엑셀 적용";
+        const filename = (o.filename ?? "").trim();
+        const suffix = created > 0 ? `신규 추가 ${created}건` : "엑셀 적용";
+        return filename ? `${filename} · ${suffix}` : suffix;
       } catch {
         return details ?? "엑셀 일괄 적용";
       }

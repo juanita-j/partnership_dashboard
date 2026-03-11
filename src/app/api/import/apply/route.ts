@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { MergeDiffItem } from "@/lib/excel-import";
-import { getDashboardUserId, logAudit } from "@/lib/audit";
 import { stripCompanySuffix, upperLatin } from "@/lib/company";
+
+const EMPLOYMENT_STATUS_VALUES = ["이직", "퇴사", "내부이동", "재직"] as const;
+function normalizeEmploymentStatus(v: string | undefined): "이직" | "퇴사" | "내부이동" | "재직" {
+  const s = (v ?? "").trim();
+  return EMPLOYMENT_STATUS_VALUES.includes(s as (typeof EMPLOYMENT_STATUS_VALUES)[number])
+    ? (s as (typeof EMPLOYMENT_STATUS_VALUES)[number])
+    : "재직";
+}
 
 /** 대용량 엑셀 적용 시 타임아웃 방지 (Vercel 등) */
 export const maxDuration = 60;
@@ -34,7 +41,7 @@ export async function POST(req: NextRequest) {
             workFax: (p.workFax ?? "").trim() || null,
             address: (p.address ?? "").trim() || null,
             businessCardDateRaw: (p.businessCardDateRaw ?? "").trim() || null,
-            employmentStatus: "재직",
+            employmentStatus: normalizeEmploymentStatus(p.employmentStatus),
             history: (p.history ?? "").trim(),
           },
         });
@@ -100,6 +107,11 @@ export async function POST(req: NextRequest) {
         if (p.workFax !== undefined) updates.workFax = (p.workFax ?? "").trim() || null;
         if (p.address !== undefined) updates.address = (p.address ?? "").trim() || null;
         if (p.businessCardDateRaw !== undefined) updates.businessCardDateRaw = (p.businessCardDateRaw ?? "").trim() || null;
+        const newEmploymentStatus = normalizeEmploymentStatus(p.employmentStatus);
+        if (p.employmentStatus !== undefined && newEmploymentStatus !== (existing.employmentStatus ?? "재직")) {
+          updates.employmentStatus = newEmploymentStatus;
+          historyParts.push(`재직상태 ${existing.employmentStatus ?? "재직"} -> ${newEmploymentStatus}`);
+        }
         // 엑셀의 '히스토리' 셀이 비어 있으면 ExcelImport 문구를 넣지 않음 (해당 셀에 내용이 있을 때만 append)
         const excelHistory = (p.history ?? "").trim();
         if (historyParts.length > 0 && excelHistory !== "") {
@@ -140,8 +152,6 @@ export async function POST(req: NextRequest) {
         }
       }
     }
-    const userId = getDashboardUserId(req);
-    if (userId) await logAudit(userId, "import_apply", null, JSON.stringify({ created, updated }));
     return NextResponse.json({ created, updated });
   } catch (e) {
     console.error(e);
