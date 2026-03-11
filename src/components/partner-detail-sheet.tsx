@@ -64,6 +64,7 @@ export function PartnerDetailSheet({
   const [partner, setPartner] = useState<PartnerDetail | null>(null);
   const [form, setForm] = useState<Record<string, unknown>>({});
   const [events, setEvents] = useState<Record<number, Record<string, unknown>>>({});
+  const [selectedEventYear, setSelectedEventYear] = useState<number>(eventYears[0] ?? 2023);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -100,6 +101,7 @@ export function PartnerDetailSheet({
           ])
         )
       );
+      setSelectedEventYear(eventYears[0] ?? 2023);
       return;
     }
     setLoading(true);
@@ -136,6 +138,7 @@ export function PartnerDetailSheet({
           };
         });
         setEvents(evMap);
+        setSelectedEventYear(allYears[0] ?? eventYears[0] ?? 2023);
       })
       .catch(() => setPartner(null))
       .finally(() => setLoading(false));
@@ -336,93 +339,107 @@ export function PartnerDetailSheet({
             </div>
             <div>
               <h4 className="font-medium mb-2">연도별 이벤트 (값 그대로 저장)</h4>
-              {Object.keys(events)
-                .map(Number)
-                .sort((a, b) => a - b)
-                .map((y) => (
-                <div key={y} className="border rounded p-3 mb-2 space-y-2">
-                  <span className="font-medium">{y}년</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Label>초청여부</Label>
-                    <select
-                      value={String(events[y]?.danInvitedRaw ?? "")}
-                      onChange={(e) =>
-                        setEvents({
-                          ...events,
-                          [y]: { ...events[y], danInvitedRaw: e.target.value },
-                        })
-                      }
-                      disabled={!canEdit}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="">-</option>
-                      <option value="Y">Y</option>
-                      <option value="N">N</option>
-                    </select>
-                    <Label>초청인</Label>
-                    <Input
-                      value={String(events[y]?.danInviter ?? "")}
-                      onChange={(e) =>
-                        setEvents({
-                          ...events,
-                          [y]: { ...events[y], danInviter: e.target.value },
-                        })
-                      }
-                      disabled={!canEdit}
-                    />
-                    <Label>선물 발송여부</Label>
-                    <select
-                      value={String(events[y]?.giftRecipient ?? "")}
-                      onChange={(e) =>
-                        setEvents({
-                          ...events,
-                          [y]: { ...events[y], giftRecipient: e.target.value },
-                        })
-                      }
-                      disabled={!canEdit}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="">-</option>
-                      <option value="Y">Y</option>
-                      <option value="N">N</option>
-                    </select>
-                    <Label>품목</Label>
-                    <Input
-                      value={String(events[y]?.giftItem ?? "")}
-                      onChange={(e) =>
-                        setEvents({
-                          ...events,
-                          [y]: { ...events[y], giftItem: e.target.value },
-                        })
-                      }
-                      disabled={!canEdit}
-                    />
-                    <Label>발송 개수</Label>
-                    <Input
-                      value={String(events[y]?.giftQtyRaw ?? "")}
-                      onChange={(e) =>
-                        setEvents({
-                          ...events,
-                          [y]: { ...events[y], giftQtyRaw: e.target.value },
-                        })
-                      }
-                      placeholder="ex. 1, 2, 3(숫자만 작성)"
-                      disabled={!canEdit}
-                    />
-                    <Label>발송인</Label>
-                    <Input
-                      value={String(events[y]?.giftSender ?? "")}
-                      onChange={(e) =>
-                        setEvents({
-                          ...events,
-                          [y]: { ...events[y], giftSender: e.target.value },
-                        })
-                      }
-                      disabled={!canEdit}
-                    />
-                  </div>
-                </div>
-              ))}
+              {(() => {
+                const yearList = Object.keys(events).map(Number).sort((a, b) => a - b);
+                const y = yearList.includes(selectedEventYear) ? selectedEventYear : (yearList[0] ?? selectedEventYear);
+                return (
+                  <>
+                    <div className="mb-2">
+                      <Label className="text-xs text-muted-foreground">연도</Label>
+                      <select
+                        value={y}
+                        onChange={(e) => setSelectedEventYear(Number(e.target.value))}
+                        className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        {yearList.map((yr) => (
+                          <option key={yr} value={yr}>{yr}년</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="border rounded p-3 space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Label>초청여부</Label>
+                        <select
+                          value={String(events[y]?.danInvitedRaw ?? "")}
+                          onChange={(e) =>
+                            setEvents({
+                              ...events,
+                              [y]: { ...events[y], danInvitedRaw: e.target.value },
+                            })
+                          }
+                          disabled={!canEdit}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="">-</option>
+                          <option value="Y">Y</option>
+                          <option value="N">N</option>
+                        </select>
+                        <Label>초청인</Label>
+                        <Input
+                          value={String(events[y]?.danInviter ?? "")}
+                          onChange={(e) =>
+                            setEvents({
+                              ...events,
+                              [y]: { ...events[y], danInviter: e.target.value },
+                            })
+                          }
+                          disabled={!canEdit}
+                        />
+                        <Label>선물 발송여부</Label>
+                        <select
+                          value={String(events[y]?.giftRecipient ?? "")}
+                          onChange={(e) =>
+                            setEvents({
+                              ...events,
+                              [y]: { ...events[y], giftRecipient: e.target.value },
+                            })
+                          }
+                          disabled={!canEdit}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="">-</option>
+                          <option value="Y">Y</option>
+                          <option value="N">N</option>
+                        </select>
+                        <Label>품목</Label>
+                        <Input
+                          value={String(events[y]?.giftItem ?? "")}
+                          onChange={(e) =>
+                            setEvents({
+                              ...events,
+                              [y]: { ...events[y], giftItem: e.target.value },
+                            })
+                          }
+                          disabled={!canEdit}
+                        />
+                        <Label>발송 개수</Label>
+                        <Input
+                          value={String(events[y]?.giftQtyRaw ?? "")}
+                          onChange={(e) =>
+                            setEvents({
+                              ...events,
+                              [y]: { ...events[y], giftQtyRaw: e.target.value },
+                            })
+                          }
+                          placeholder="ex. 1, 2, 3(숫자만 작성)"
+                          disabled={!canEdit}
+                        />
+                        <Label>발송인</Label>
+                        <Input
+                          value={String(events[y]?.giftSender ?? "")}
+                          onChange={(e) =>
+                            setEvents({
+                              ...events,
+                              [y]: { ...events[y], giftSender: e.target.value },
+                            })
+                          }
+                          disabled={!canEdit}
+                        />
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
             {canEdit && (
               <div className="flex gap-2 pt-4">

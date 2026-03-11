@@ -787,7 +787,8 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
       <Table className="text-[13px]">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-10 px-2 relative" onClick={(e) => e.stopPropagation()}>
+            <TableHead className="w-10 px-2 relative align-middle" onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-center">
               <button
                 ref={selectAllTriggerRef}
                 type="button"
@@ -858,6 +859,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                   )}
                 </div>
               )}
+              </div>
             </TableHead>
             {FIXED_HEADERS.map((h) => {
               const sortField = COL_ID_TO_SORT_FIELD[h.id];
@@ -919,7 +921,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                 onSelectPartner(p.id);
               }}
             >
-              <TableCell className="w-10 px-2" onClick={(e) => e.stopPropagation()}>
+              <TableCell className="w-10 px-2 text-center align-middle" onClick={(e) => e.stopPropagation()}>
                 <input
                   type="checkbox"
                   checked={selectedIds.has(p.id)}

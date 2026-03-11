@@ -63,9 +63,10 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
   return (
     <div className="rounded-lg border bg-card p-4 space-y-4">
       <div className="font-medium text-sm rounded py-1.5 px-2 bg-gray-600 text-white">
-        FILTER (기본 정보)
+        FILTER
       </div>
-      <div className="grid grid-cols-4 sm:grid-cols-5 xl:grid-cols-6 gap-2 items-end rounded-md bg-gray-50/80 p-2">
+      <div className="rounded-md bg-gray-50/80 p-3 space-y-3">
+        <div className="grid grid-cols-4 sm:grid-cols-5 xl:grid-cols-6 gap-2 items-end">
         <div className="min-w-0">
           <Label className="text-xs">재직상태</Label>
           <select
@@ -122,13 +123,8 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
             적용
           </Button>
         </div>
-      </div>
-      <div className="border-t pt-4 mt-2">
-        <div className="font-medium text-sm mb-2 rounded py-1.5 px-2 bg-gray-600 text-white">
-          FILTER (DAN/연말선물)
         </div>
-        <div className="rounded-md border border-gray-200 bg-gray-50/80 p-3 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
             <Label className="text-xs font-medium shrink-0">DAN초청여부 (Y/N)</Label>
             <div className="flex items-center gap-2 flex-nowrap">
               {eventYears.map((year) => {
@@ -159,8 +155,8 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
                 className="h-9 w-24 rounded-md border border-input bg-background px-2 text-sm"
               />
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
             <Label className="text-xs font-medium shrink-0">선물발송여부 (Y/N)</Label>
             <div className="flex items-center gap-2 flex-nowrap">
               {eventYears.map((year) => {
@@ -191,7 +187,6 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
                 className="h-9 w-24 rounded-md border border-input bg-background px-2 text-sm"
               />
             </div>
-          </div>
         </div>
       </div>
 

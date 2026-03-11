@@ -58,14 +58,15 @@ function buildDetailSummary(detailItems: string[]): string {
     .join(", ");
 }
 
-/** 같은 사용자·같은 분( minute ) 내 액션을 하나의 버전으로 묶음 */
+/** 같은 사용자·같은 3분 구간 내 액션을 하나의 버전으로 묶음 */
 function groupByUserAndMinute(
   items: { id: string; userId: string; action: string; entityId: string | null; details: string | null; createdAt: Date }[]
 ): { id: string; userId: string; action: string; details: string | null; createdAt: Date; detailItems: string[] }[] {
   const groups: { userId: string; minuteKey: number; createdAt: Date; actions: string[]; detailItems: string[]; firstId: string }[] = [];
   for (const row of items) {
     const t = new Date(row.createdAt);
-    const minuteKey = new Date(t.getFullYear(), t.getMonth(), t.getDate(), t.getHours(), t.getMinutes()).getTime();
+    const bucketMin = Math.floor(t.getMinutes() / 3) * 3;
+    const minuteKey = new Date(t.getFullYear(), t.getMonth(), t.getDate(), t.getHours(), bucketMin).getTime();
     const detailStr = formatDetail({ action: row.action, details: row.details });
     const last = groups[groups.length - 1];
     if (last && last.userId === row.userId && last.minuteKey === minuteKey) {
