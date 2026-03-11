@@ -312,7 +312,7 @@ export function PartnerDetailSheet({
                 value={String(form.employmentStatus ?? "재직")}
                 onChange={(e) => setForm({ ...form, employmentStatus: e.target.value })}
                 disabled={!canEdit}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 pr-8 py-2 text-sm"
               >
                 {EMPLOYMENT_STATUS_VALUES.map((v) => (
                   <option key={v} value={v}>{v}</option>
@@ -338,7 +338,7 @@ export function PartnerDetailSheet({
               />
             </div>
             <div>
-              <h4 className="font-medium mb-2">연도별 이벤트 (값 그대로 저장)</h4>
+              <h4 className="font-medium mb-2">연도별 이벤트</h4>
               {(() => {
                 const yearList = Object.keys(events).map(Number).sort((a, b) => a - b);
                 const y = yearList.includes(selectedEventYear) ? selectedEventYear : (yearList[0] ?? selectedEventYear);
@@ -349,7 +349,7 @@ export function PartnerDetailSheet({
                       <select
                         value={y}
                         onChange={(e) => setSelectedEventYear(Number(e.target.value))}
-                        className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 pr-8 py-2 text-sm"
                       >
                         {yearList.map((yr) => (
                           <option key={yr} value={yr}>{yr}년</option>
@@ -358,7 +358,7 @@ export function PartnerDetailSheet({
                     </div>
                     <div className="border rounded p-3 space-y-2">
                       <div className="grid grid-cols-2 gap-2">
-                        <Label>초청여부</Label>
+                        <Label>DAN초청여부</Label>
                         <select
                           value={String(events[y]?.danInvitedRaw ?? "")}
                           onChange={(e) =>
@@ -368,13 +368,13 @@ export function PartnerDetailSheet({
                             })
                           }
                           disabled={!canEdit}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 pr-8 py-2 text-sm"
                         >
                           <option value="">-</option>
                           <option value="Y">Y</option>
                           <option value="N">N</option>
                         </select>
-                        <Label>초청인</Label>
+                        <Label>DAN초청인</Label>
                         <Input
                           value={String(events[y]?.danInviter ?? "")}
                           onChange={(e) =>
@@ -395,7 +395,7 @@ export function PartnerDetailSheet({
                             })
                           }
                           disabled={!canEdit}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 pr-8 py-2 text-sm"
                         >
                           <option value="">-</option>
                           <option value="Y">Y</option>

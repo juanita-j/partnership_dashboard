@@ -1,7 +1,7 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import type { FilterState, OptionalColumnId } from "@/app/dashboard/types";
 import { OPTIONAL_COLUMN_IDS, EMPLOYMENT_STATUS_VALUES } from "@/app/dashboard/types";
@@ -16,6 +16,8 @@ const OPTIONAL_LABELS: Record<OptionalColumnId, string> = {
   giftSender: "선물발송인",
 };
 
+const DROPDOWN_INPUT_CLASS = "h-9 rounded-md border border-input bg-background px-2 py-1 text-sm";
+
 interface FilterBarProps {
   filters: FilterState;
   eventYears: number[];
@@ -24,6 +26,30 @@ interface FilterBarProps {
 }
 
 export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: FilterBarProps) {
+  const [danOpen, setDanOpen] = useState(false);
+  const [giftOpen, setGiftOpen] = useState(false);
+  const danRef = useRef<HTMLDivElement>(null);
+  const giftRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!danOpen) return;
+    const close = (e: MouseEvent) => {
+      if (danRef.current?.contains(e.target as Node)) return;
+      setDanOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [danOpen]);
+  useEffect(() => {
+    if (!giftOpen) return;
+    const close = (e: MouseEvent) => {
+      if (giftRef.current?.contains(e.target as Node)) return;
+      setGiftOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [giftOpen]);
+
   const toggleShowColumn = (id: OptionalColumnId) => {
     const show = filters.showColumns.includes(id);
     onFiltersChange({
@@ -92,50 +118,73 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
         <div className="rounded-md bg-gray-50/80 p-3">
           <div className="flex flex-wrap items-center gap-2">
             <Label className="text-xs font-medium shrink-0 w-24">DAN초청년도</Label>
-            {eventYears.map((year) => {
-              const yy = year % 100;
-              const key = `dan${yy}` as keyof FilterState;
-              const checked = !!(filters[key] as boolean);
-              return (
-                <label key={year} className="flex items-center gap-1.5 shrink-0 cursor-pointer text-sm">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleDanYear(year)}
-                    className="rounded border-input"
-                  />
-                  <span className="text-xs">DAN{yy}</span>
-                </label>
-              );
-            })}
+            <div className="relative shrink-0" ref={danRef}>
+              <button
+                type="button"
+                onClick={() => setDanOpen((o) => !o)}
+                className={`${DROPDOWN_INPUT_CLASS} min-w-[7rem] text-left flex items-center justify-between gap-1`}
+              >
+                <span className="text-sm truncate">
+                  {eventYears.filter((y) => !!(filters[`dan${y % 100}`] as boolean)).length > 0
+                    ? eventYears.filter((y) => !!(filters[`dan${y % 100}`] as boolean)).map((y) => `DAN${y % 100}`).join(", ")
+                    : "선택"}
+                </span>
+                <span className="opacity-70 text-xs shrink-0">{danOpen ? "▲" : "▼"}</span>
+              </button>
+              {danOpen && (
+                <div className="absolute left-0 top-full z-20 mt-1 min-w-[7rem] rounded-md border border-input bg-background p-2 shadow-md">
+                  {eventYears.map((year) => {
+                    const yy = year % 100;
+                    const key = `dan${yy}` as keyof FilterState;
+                    const checked = !!(filters[key] as boolean);
+                    return (
+                      <label key={year} className="flex items-center gap-2 cursor-pointer rounded px-2 py-1.5 text-sm hover:bg-muted/50">
+                        <input type="checkbox" checked={checked} onChange={() => toggleDanYear(year)} className="rounded border-input" />
+                        DAN{yy}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <Label className="text-xs text-muted-foreground">DAN초청인</Label>
-              <Input placeholder="검색" value={filters.inviter} onChange={(e) => onFiltersChange({ ...filters, inviter: e.target.value })} className="h-9 w-24 rounded-md border border-input bg-background px-2 text-sm" />
+              <Input placeholder="검색" value={filters.inviter} onChange={(e) => onFiltersChange({ ...filters, inviter: e.target.value })} className={`${DROPDOWN_INPUT_CLASS} min-w-[7rem]`} />
             </div>
-            <Label className="text-xs font-medium shrink-0 w-24 ml-1">선물발송년도</Label>
-            {eventYears.map((year) => {
-              const yy = year % 100;
-              const key = `gift${year}` as keyof FilterState;
-              const checked = !!(filters[key] as boolean);
-              return (
-                <label key={year} className="flex items-center gap-1.5 shrink-0 cursor-pointer text-sm">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleGiftYear(year)}
-                    className="rounded border-input"
-                  />
-                  <span className="text-xs">{yy}년</span>
-                </label>
-              );
-            })}
+            <Label className="text-xs font-medium shrink-0 w-24">선물발송년도</Label>
+            <div className="relative shrink-0" ref={giftRef}>
+              <button
+                type="button"
+                onClick={() => setGiftOpen((o) => !o)}
+                className={`${DROPDOWN_INPUT_CLASS} min-w-[7rem] text-left flex items-center justify-between gap-1`}
+              >
+                <span className="text-sm truncate">
+                  {eventYears.filter((y) => !!(filters[`gift${y}`] as boolean)).length > 0
+                    ? eventYears.filter((y) => !!(filters[`gift${y}`] as boolean)).map((y) => `${y % 100}년`).join(", ")
+                    : "선택"}
+                </span>
+                <span className="opacity-70 text-xs shrink-0">{giftOpen ? "▲" : "▼"}</span>
+              </button>
+              {giftOpen && (
+                <div className="absolute left-0 top-full z-20 mt-1 min-w-[7rem] rounded-md border border-input bg-background p-2 shadow-md">
+                  {eventYears.map((year) => {
+                    const yy = year % 100;
+                    const key = `gift${year}` as keyof FilterState;
+                    const checked = !!(filters[key] as boolean);
+                    return (
+                      <label key={year} className="flex items-center gap-2 cursor-pointer rounded px-2 py-1.5 text-sm hover:bg-muted/50">
+                        <input type="checkbox" checked={checked} onChange={() => toggleGiftYear(year)} className="rounded border-input" />
+                        {yy}년
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-1.5 shrink-0">
               <Label className="text-xs text-muted-foreground">선물발송인</Label>
-              <Input placeholder="검색" value={filters.giftSender} onChange={(e) => onFiltersChange({ ...filters, giftSender: e.target.value })} className="h-9 w-24 rounded-md border border-input bg-background px-2 text-sm" />
+              <Input placeholder="검색" value={filters.giftSender} onChange={(e) => onFiltersChange({ ...filters, giftSender: e.target.value })} className={`${DROPDOWN_INPUT_CLASS} min-w-[7rem]`} />
             </div>
-            <Button size="sm" onClick={onRefresh} className="h-9 px-3 text-sm shrink-0 ml-auto">
-              적용
-            </Button>
           </div>
         </div>
       </div>

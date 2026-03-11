@@ -108,6 +108,7 @@ export function pickCanonicalCompanyName(names: string[], emailDomain?: string |
 }
 
 let aliasCache: { normalizedName: string; alias: string }[] | null = null;
+const domainNamesCache = new Map<string, string[]>();
 
 async function getAliases(): Promise<{ normalizedName: string; alias: string }[]> {
   if (aliasCache) return aliasCache;
@@ -118,20 +119,30 @@ async function getAliases(): Promise<{ normalizedName: string; alias: string }[]
   return rows;
 }
 
+/** 목록 API 등에서 normalizeCompany 호출 전에 한 번 호출하면 alias DB 조회 1회로 캐시 선충전 */
+export async function warmCompanyAliasCache(): Promise<void> {
+  await getAliases();
+  domainNamesCache.clear();
+}
+
 /** 도메인으로 파트너들의 회사명을 조회한 뒤, 통일 규칙 적용한 이름 반환 */
 export async function getCanonicalCompanyForDomain(
   domain: string,
   currentCompany: string
 ): Promise<string> {
-  const partners = await prisma.partner.findMany({
-    where: {
-      AND: [{ email: { not: null } }, { email: { contains: "@" + domain } }],
-    },
-    select: { companyNormalized: true },
-  });
-  const names = partners
-    .map((p) => (p.companyNormalized ?? "").trim())
-    .filter(Boolean);
+  let names = domainNamesCache.get(domain);
+  if (names === undefined) {
+    const partners = await prisma.partner.findMany({
+      where: {
+        AND: [{ email: { not: null } }, { email: { contains: "@" + domain } }],
+      },
+      select: { companyNormalized: true },
+    });
+    names = partners
+      .map((p) => (p.companyNormalized ?? "").trim())
+      .filter(Boolean);
+    domainNamesCache.set(domain, names);
+  }
   if (!currentCompany.trim()) {
     return pickCanonicalCompanyName(names, domain);
   }
@@ -174,4 +185,5 @@ export async function normalizeCompany(
 
 export function invalidateCompanyAliasCache() {
   aliasCache = null;
+  domainNamesCache.clear();
 }

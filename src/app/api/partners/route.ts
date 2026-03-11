@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { stripCompanySuffix, upperLatin, normalizeCompany } from "@/lib/company";
+import { stripCompanySuffix, upperLatin, normalizeCompany, warmCompanyAliasCache } from "@/lib/company";
+import { stripCompanySuffixForDisplay } from "@/lib/company-display";
 import { partnerCreateSchema } from "@/lib/validations";
 import { getDashboardUserId, logAudit } from "@/lib/audit";
 import type { Prisma } from "@prisma/client";
@@ -120,17 +121,42 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ids: rows.map((r) => r.id) });
     }
 
-    const [partners, total] = await Promise.all([
-      prisma.partner.findMany({
-        where: where as Prisma.PartnerWhereInput,
-        include: { yearlyEvents: true },
-        orderBy: { [orderByField]: sortOrder },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.partner.count({ where: where as Prisma.PartnerWhereInput }),
-    ]);
+    const whereInput = where as Prisma.PartnerWhereInput;
+    let partners: Awaited<ReturnType<typeof prisma.partner.findMany>>;
+    let total: number;
+    if (orderByField === "companyNormalized") {
+      const [countRes, all] = await Promise.all([
+        prisma.partner.count({ where: whereInput }),
+        prisma.partner.findMany({
+          where: whereInput,
+          include: { yearlyEvents: true },
+          take: 10000,
+        }),
+      ]);
+      total = countRes;
+      const sorted = [...all].sort((a, b) => {
+        const da = stripCompanySuffixForDisplay(a.companyNormalized ?? "");
+        const db = stripCompanySuffixForDisplay(b.companyNormalized ?? "");
+        const c = da.localeCompare(db, "ko");
+        return sortOrder === "asc" ? c : -c;
+      });
+      partners = sorted.slice((page - 1) * limit, (page - 1) * limit + limit);
+    } else {
+      const [countRes, partnersResult] = await Promise.all([
+        prisma.partner.count({ where: whereInput }),
+        prisma.partner.findMany({
+          where: whereInput,
+          include: { yearlyEvents: true },
+          orderBy: { [orderByField]: sortOrder },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+      ]);
+      total = countRes;
+      partners = partnersResult;
+    }
 
+    await warmCompanyAliasCache();
     const data = await Promise.all(
       partners.map(async (p) => {
         const { normalized } = await normalizeCompany(

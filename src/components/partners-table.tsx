@@ -273,6 +273,39 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
   const selectAllTriggerRef = useRef<HTMLButtonElement>(null);
   const selectAllMenuRef = useRef<HTMLDivElement>(null);
   const lastFetchedQueryRef = useRef<string | null>(null);
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  const [resizing, setResizing] = useState<{ colId: string; startX: number; startW: number } | null>(null);
+
+  useEffect(() => {
+    if (!resizing) return;
+    const move = (e: MouseEvent) => {
+      setColWidths((prev) => ({
+        ...prev,
+        [resizing.colId]: Math.max(32, resizing.startW + (e.clientX - resizing.startX)),
+      }));
+    };
+    const up = () => setResizing(null);
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    return () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [resizing]);
+
+  const handleResizeStart = (colId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const th = (e.target as HTMLElement).closest("th");
+    const w = th ? th.getBoundingClientRect().width : 80;
+    setResizing({ colId, startX: e.clientX, startW: colWidths[colId] ?? w });
+  };
+
+  const getColStyle = (colId: string) => (colWidths[colId] != null ? { width: colWidths[colId], minWidth: colWidths[colId] } : undefined);
 
   useEffect(() => {
     if (!selectAllOpen) return;
@@ -344,15 +377,20 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
   }, [filters, refreshKey, currentPage, eventYears, sortBy, sortOrder]);
 
   const showOptional = OPTIONAL_HEADERS.filter((h) => filters.showColumns.includes(h.id));
-  const expandedOptional = showOptional.flatMap((h): { id: string; label: string }[] => {
-    if (h.id === "danInvited") return DAN_INVITED_COL_IDS.map((colId) => ({ id: colId, label: DAN_HEADERS_DISPLAY.find((d) => d.id === colId)!.label }));
-    if (h.id === "inviter") return INVITER_COL_IDS.map((colId) => ({ id: colId, label: DAN_HEADERS_DISPLAY.find((d) => d.id === colId)!.label }));
-    if (h.id === "giftRecipient") return GIFT_RECIPIENT_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === colId)!.label }));
-    if (h.id === "giftItem") return GIFT_ITEM_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === colId)!.label }));
-    if (h.id === "giftQty") return GIFT_QTY_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === colId)!.label }));
-    if (h.id === "giftSender") return GIFT_SENDER_COL_IDS.map((colId) => ({ id: colId, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === colId)!.label }));
-    return [{ id: h.id, label: h.label }];
-  });
+  const nonEventExpanded = showOptional
+    .filter((h) => h.id === "businessCardDate" || h.id === "history")
+    .map((h) => ({ id: h.id, label: h.label }));
+  const eventExpandedOrder: { id: string; label: string }[] = [];
+  for (const year of displayEventYears) {
+    const yy = year % 100;
+    if (filters.showColumns.includes("danInvited")) eventExpandedOrder.push({ id: `dan${yy}Invited`, label: DAN_HEADERS_DISPLAY.find((d) => d.id === `dan${yy}Invited`)!.label });
+    if (filters.showColumns.includes("inviter")) eventExpandedOrder.push({ id: `dan${yy}Inviter`, label: DAN_HEADERS_DISPLAY.find((d) => d.id === `dan${yy}Inviter`)!.label });
+    if (filters.showColumns.includes("giftRecipient")) eventExpandedOrder.push({ id: `gift${yy}Recipient`, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === `gift${yy}Recipient`)!.label });
+    if (filters.showColumns.includes("giftItem")) eventExpandedOrder.push({ id: `gift${yy}Item`, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === `gift${yy}Item`)!.label });
+    if (filters.showColumns.includes("giftQty")) eventExpandedOrder.push({ id: `gift${yy}Qty`, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === `gift${yy}Qty`)!.label });
+    if (filters.showColumns.includes("giftSender")) eventExpandedOrder.push({ id: `gift${yy}Sender`, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === `gift${yy}Sender`)!.label });
+  }
+  const expandedOptional = [...nonEventExpanded, ...eventExpandedOrder];
   const isOptionalEventCol = (colId: string) =>
     DAN_INVITED_COL_IDS.includes(colId) ||
     INVITER_COL_IDS.includes(colId) ||
@@ -790,9 +828,9 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
         )}
       </div>
       <div className="rounded-lg border overflow-x-auto">
-      <Table className="text-[13px]">
+      <Table className="text-[13px] table-fixed [&_th]:h-10 [&_td]:h-10 [&_th]:py-1.5 [&_td]:py-1.5">
         <TableHeader>
-          <TableRow>
+          <TableRow className="h-10">
             <TableHead className="w-10 px-2 relative align-middle" onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-center">
               <button
@@ -873,16 +911,18 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
               return (
                 <TableHead
                   key={h.id}
-                  className={`whitespace-nowrap ${getColWidthClass(h.id)} ${sortField ? "cursor-pointer select-none hover:bg-muted/50" : ""}`}
+                  className={`relative whitespace-nowrap ${getColWidthClass(h.id)} ${sortField ? "cursor-pointer select-none hover:bg-muted/50" : ""}`}
+                  style={getColStyle(h.id)}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (sortField) handleSort(h.id);
                   }}
                 >
-                  <span className="inline-flex items-center gap-0.5">
+                  <span className="inline-flex items-center gap-0.5 truncate block">
                     {h.label}
                     {isActive && <span className="text-muted-foreground">{sortOrder === "asc" ? " ↑" : " ↓"}</span>}
                   </span>
+                  <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} aria-hidden />
                 </TableHead>
               );
             })}
@@ -892,27 +932,31 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
               return (
                 <TableHead
                   key={item.id}
-                  className={`whitespace-nowrap ${getColWidthClass(item.id)} ${sortField ? "cursor-pointer select-none hover:bg-muted/50" : ""}`}
+                  className={`relative whitespace-nowrap ${getColWidthClass(item.id)} ${sortField ? "cursor-pointer select-none hover:bg-muted/50" : ""}`}
+                  style={getColStyle(item.id)}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (sortField) handleSort(item.id);
                   }}
                 >
-                  <span className="inline-flex items-center gap-0.5">
+                  <span className="inline-flex items-center gap-0.5 truncate block">
                     {item.label}
                     {isActive && <span className="text-muted-foreground">{sortOrder === "asc" ? " ↑" : " ↓"}</span>}
                   </span>
+                  <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(item.id, e)} aria-hidden />
                 </TableHead>
               );
             })}
             {showDan.map((h) => (
-              <TableHead key={h.id} className={`whitespace-nowrap ${getColWidthClass(h.id)}`}>
-                {h.label}
+              <TableHead key={h.id} className={`relative whitespace-nowrap ${getColWidthClass(h.id)}`} style={getColStyle(h.id)}>
+                <span className="truncate block">{h.label}</span>
+                <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} aria-hidden />
               </TableHead>
             ))}
             {showGift.map((h) => (
-              <TableHead key={h.id} className={`whitespace-nowrap ${getColWidthClass(h.id)}`}>
-                {h.label}
+              <TableHead key={h.id} className={`relative whitespace-nowrap ${getColWidthClass(h.id)}`} style={getColStyle(h.id)}>
+                <span className="truncate block">{h.label}</span>
+                <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} aria-hidden />
               </TableHead>
             ))}
           </TableRow>
@@ -921,7 +965,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
           {data.map((p) => (
             <TableRow
               key={p.id}
-              className="cursor-pointer hover:bg-muted/50"
+              className="cursor-pointer hover:bg-muted/50 h-10"
               onClick={(e) => {
                 if ((e.target as HTMLElement).closest("select, input, button")) return;
                 onSelectPartner(p.id);
@@ -937,12 +981,12 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                 />
               </TableCell>
               {FIXED_HEADERS.map((h) => (
-                <TableCell key={h.id} className={cellClassName(h.id) || undefined} onClick={(e) => canEdit && e.stopPropagation()}>
-                  {canEdit ? renderEditableCell(p, h.id) : (getCellValue(p, h.id) || "-")}
+                <TableCell key={h.id} className={`min-w-0 overflow-hidden ${cellClassName(h.id) || ""}`} style={getColStyle(h.id)} onClick={(e) => canEdit && e.stopPropagation()}>
+                  {canEdit ? renderEditableCell(p, h.id) : <span className="block truncate">{getCellValue(p, h.id) || "-"}</span>}
                 </TableCell>
               ))}
               {expandedOptional.map((item) => (
-                <TableCell key={item.id} className={cellClassName(item.id) || undefined} onClick={(e) => (item.id === "history" || (canEdit && (item.id === "businessCardDate" || DAN_HEADERS.some((d) => d.id === item.id) || GIFT_HEADERS.some((g) => g.id === item.id)))) && e.stopPropagation()}>
+                <TableCell key={item.id} className={`min-w-0 overflow-hidden ${cellClassName(item.id) || ""}`} style={getColStyle(item.id)} onClick={(e) => (item.id === "history" || (canEdit && (item.id === "businessCardDate" || DAN_HEADERS.some((d) => d.id === item.id) || GIFT_HEADERS.some((g) => g.id === item.id)))) && e.stopPropagation()}>
                   {item.id === "history" && canEdit && editingHistoryId === p.id ? (
                     <div className="flex gap-1 items-start min-w-[200px]" onClick={(e) => e.stopPropagation()}>
                       <textarea
@@ -965,28 +1009,28 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                     </div>
                   ) : item.id === "history" && canEdit ? (
                     <div
-                      className="min-h-[32px] min-w-[120px] px-2 py-1 rounded border border-transparent hover:border-input cursor-text"
+                      className="min-h-[32px] min-w-[120px] px-2 py-1 rounded border border-transparent hover:border-input cursor-text truncate"
                       onClick={() => startEditHistory(p)}
                     >
                       {getCellValue(p, item.id)}
                     </div>
                   ) : item.id === "history" ? (
-                    getCellValue(p, item.id)
+                    <span className="block truncate">{getCellValue(p, item.id)}</span>
                   ) : canEdit && (item.id === "businessCardDate" || isOptionalEventCol(item.id)) ? (
                     renderEditableCell(p, item.id)
                   ) : (
-                    (getCellValue(p, item.id) || "-")
+                    <span className="block truncate">{getCellValue(p, item.id) || "-"}</span>
                   )}
                 </TableCell>
               ))}
               {showDan.map((h) => (
-                <TableCell key={h.id} className={cellClassName(h.id) || undefined} onClick={(e) => canEdit && e.stopPropagation()}>
-                  {canEdit ? renderEditableCell(p, h.id) : (getCellValue(p, h.id) || "-")}
+                <TableCell key={h.id} className={`min-w-0 overflow-hidden ${cellClassName(h.id) || ""}`} style={getColStyle(h.id)} onClick={(e) => canEdit && e.stopPropagation()}>
+                  {canEdit ? renderEditableCell(p, h.id) : <span className="block truncate">{getCellValue(p, h.id) || "-"}</span>}
                 </TableCell>
               ))}
               {showGift.map((h) => (
-                <TableCell key={h.id} className={cellClassName(h.id) || undefined} onClick={(e) => canEdit && e.stopPropagation()}>
-                  {canEdit ? renderEditableCell(p, h.id) : (getCellValue(p, h.id) || "-")}
+                <TableCell key={h.id} className={`min-w-0 overflow-hidden ${cellClassName(h.id) || ""}`} style={getColStyle(h.id)} onClick={(e) => canEdit && e.stopPropagation()}>
+                  {canEdit ? renderEditableCell(p, h.id) : <span className="block truncate">{getCellValue(p, h.id) || "-"}</span>}
                 </TableCell>
               ))}
             </TableRow>
