@@ -186,6 +186,8 @@ function DashboardContent() {
         onSelectPartner={setSelectedPartnerId}
         onRefresh={refresh}
         canEdit={!!editor}
+        displayShowColumns={pendingFilters.showColumns}
+        displayShowEventYears={pendingFilters.showEventYears}
       />
       <PartnerDetailSheet
         partnerId={selectedPartnerId}

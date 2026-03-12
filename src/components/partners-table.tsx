@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Table,
   TableBody,
@@ -49,6 +50,9 @@ interface PartnersTableProps {
   onSelectPartner: (id: string | null) => void;
   onRefresh?: () => void;
   canEdit: boolean;
+  /** SHOW 칼럼 표시용 (미전달 시 filters 사용). 적용 버튼 없이 즉시 반영 */
+  displayShowColumns?: FilterState["showColumns"];
+  displayShowEventYears?: number[];
 }
 
 /** 헤더 colId → API sortBy 필드명 */
@@ -262,7 +266,7 @@ function getCellValue(p: PartnerRow, colId: string): string {
   }
 }
 
-export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner, onRefresh, canEdit }: PartnersTableProps) {
+export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner, onRefresh, canEdit, displayShowColumns, displayShowEventYears }: PartnersTableProps) {
   const [data, setData] = useState<PartnerRow[]>([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 });
   const [loading, setLoading] = useState(true);
@@ -280,16 +284,21 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
   const lastFetchedQueryRef = useRef<string | null>(null);
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
   const [resizing, setResizing] = useState<{ colId: string; startX: number; startW: number } | null>(null);
+  const [resizeCursorX, setResizeCursorX] = useState<number | null>(null);
 
   useEffect(() => {
     if (!resizing) return;
     const move = (e: MouseEvent) => {
+      setResizeCursorX(e.clientX);
       setColWidths((prev) => ({
         ...prev,
         [resizing.colId]: Math.max(32, resizing.startW + (e.clientX - resizing.startX)),
       }));
     };
-    const up = () => setResizing(null);
+    const up = () => {
+      setResizing(null);
+      setResizeCursorX(null);
+    };
     document.addEventListener("mousemove", move);
     document.addEventListener("mouseup", up);
     document.body.style.cursor = "col-resize";
@@ -299,6 +308,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
       document.removeEventListener("mouseup", up);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
+      setResizeCursorX(null);
     };
   }, [resizing]);
 
@@ -307,6 +317,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
     e.stopPropagation();
     const th = (e.target as HTMLElement).closest("th");
     const w = th ? th.getBoundingClientRect().width : 80;
+    setResizeCursorX(e.clientX);
     setResizing({ colId, startX: e.clientX, startW: colWidths[colId] ?? w });
   };
 
@@ -377,7 +388,9 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
     setEditingOriginalValue(null);
   };
 
-  const displayEventYears = (filters.showEventYears?.length ? filters.showEventYears : eventYears) as number[];
+  const effectiveShowColumns = displayShowColumns ?? filters.showColumns;
+  const effectiveShowEventYears = displayShowEventYears ?? filters.showEventYears;
+  const displayEventYears = (effectiveShowEventYears?.length ? effectiveShowEventYears : eventYears) as number[];
   const DAN_HEADERS = buildDanHeaders(eventYears);
   const GIFT_HEADERS = buildGiftHeaders(eventYears);
   const { DAN_INVITED_COL_IDS, INVITER_COL_IDS, GIFT_RECIPIENT_COL_IDS, GIFT_ITEM_COL_IDS, GIFT_QTY_COL_IDS, GIFT_SENDER_COL_IDS } = buildOptionalColIdArrays(displayEventYears);
@@ -402,19 +415,19 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
       .finally(() => setLoading(false));
   }, [filters, refreshKey, currentPage, eventYears, sortBy, sortOrder]);
 
-  const showOptional = OPTIONAL_HEADERS.filter((h) => filters.showColumns.includes(h.id));
+  const showOptional = OPTIONAL_HEADERS.filter((h) => effectiveShowColumns.includes(h.id));
   const nonEventExpanded = showOptional
     .filter((h) => h.id === "businessCardDate" || h.id === "history")
     .map((h) => ({ id: h.id, label: h.label }));
   const eventExpandedOrder: { id: string; label: string }[] = [];
   for (const year of displayEventYears) {
     const yy = year % 100;
-    if (filters.showColumns.includes("danInvited")) eventExpandedOrder.push({ id: `dan${yy}Invited`, label: DAN_HEADERS_DISPLAY.find((d) => d.id === `dan${yy}Invited`)!.label });
-    if (filters.showColumns.includes("inviter")) eventExpandedOrder.push({ id: `dan${yy}Inviter`, label: DAN_HEADERS_DISPLAY.find((d) => d.id === `dan${yy}Inviter`)!.label });
-    if (filters.showColumns.includes("giftRecipient")) eventExpandedOrder.push({ id: `gift${yy}Recipient`, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === `gift${yy}Recipient`)!.label });
-    if (filters.showColumns.includes("giftItem")) eventExpandedOrder.push({ id: `gift${yy}Item`, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === `gift${yy}Item`)!.label });
-    if (filters.showColumns.includes("giftQty")) eventExpandedOrder.push({ id: `gift${yy}Qty`, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === `gift${yy}Qty`)!.label });
-    if (filters.showColumns.includes("giftSender")) eventExpandedOrder.push({ id: `gift${yy}Sender`, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === `gift${yy}Sender`)!.label });
+    if (effectiveShowColumns.includes("danInvited")) eventExpandedOrder.push({ id: `dan${yy}Invited`, label: DAN_HEADERS_DISPLAY.find((d) => d.id === `dan${yy}Invited`)!.label });
+    if (effectiveShowColumns.includes("inviter")) eventExpandedOrder.push({ id: `dan${yy}Inviter`, label: DAN_HEADERS_DISPLAY.find((d) => d.id === `dan${yy}Inviter`)!.label });
+    if (effectiveShowColumns.includes("giftRecipient")) eventExpandedOrder.push({ id: `gift${yy}Recipient`, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === `gift${yy}Recipient`)!.label });
+    if (effectiveShowColumns.includes("giftItem")) eventExpandedOrder.push({ id: `gift${yy}Item`, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === `gift${yy}Item`)!.label });
+    if (effectiveShowColumns.includes("giftQty")) eventExpandedOrder.push({ id: `gift${yy}Qty`, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === `gift${yy}Qty`)!.label });
+    if (effectiveShowColumns.includes("giftSender")) eventExpandedOrder.push({ id: `gift${yy}Sender`, label: GIFT_HEADERS_DISPLAY.find((g) => g.id === `gift${yy}Sender`)!.label });
   }
   const expandedOptional = [...nonEventExpanded, ...eventExpandedOrder];
   const isOptionalEventCol = (colId: string) =>
@@ -829,6 +842,16 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
 
   return (
     <div className="space-y-2">
+      {resizeCursorX != null &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed top-0 bottom-0 w-0.5 bg-primary/80 pointer-events-none z-[200]"
+            style={{ left: resizeCursorX, transform: "translateX(-50%)" }}
+            aria-hidden
+          />,
+          document.body
+        )}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm text-muted-foreground">
           결과: 총 <span className="font-medium text-foreground">{pagination.total}</span>건
@@ -941,6 +964,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                   style={getColStyle(h.id)}
                   onClick={(e) => {
                     e.stopPropagation();
+                    if ((e.target as HTMLElement).closest?.("[data-resize-handle]")) return;
                     if (sortField) handleSort(h.id);
                   }}
                 >
@@ -948,7 +972,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                     {h.label}
                     {isActive && <span className="text-muted-foreground">{sortOrder === "asc" ? " ↑" : " ↓"}</span>}
                   </span>
-                  <div className="absolute right-0 top-0 bottom-0 w-2 z-10 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
+                  <div data-resize-handle className="absolute right-0 top-0 bottom-0 w-2 z-10 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} aria-hidden />
                 </TableHead>
               );
             })}
@@ -962,6 +986,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                   style={getColStyle(item.id)}
                   onClick={(e) => {
                     e.stopPropagation();
+                    if ((e.target as HTMLElement).closest?.("[data-resize-handle]")) return;
                     if (sortField) handleSort(item.id);
                   }}
                 >
@@ -969,20 +994,20 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                     {item.label}
                     {isActive && <span className="text-muted-foreground">{sortOrder === "asc" ? " ↑" : " ↓"}</span>}
                   </span>
-                  <div className="absolute right-0 top-0 bottom-0 w-2 z-10 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(item.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
+                  <div data-resize-handle className="absolute right-0 top-0 bottom-0 w-2 z-10 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(item.id, e)} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} aria-hidden />
                 </TableHead>
               );
             })}
             {showDan.map((h) => (
               <TableHead key={h.id} className={`relative whitespace-nowrap px-2 ${getColWidthClass(h.id)}`} style={getColStyle(h.id)}>
                 <span className="truncate block">{h.label}</span>
-                <div className="absolute right-0 top-0 bottom-0 w-2 z-10 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
+                <div data-resize-handle className="absolute right-0 top-0 bottom-0 w-2 z-10 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} aria-hidden />
               </TableHead>
             ))}
             {showGift.map((h) => (
               <TableHead key={h.id} className={`relative whitespace-nowrap px-2 ${getColWidthClass(h.id)}`} style={getColStyle(h.id)}>
                 <span className="truncate block">{h.label}</span>
-                <div className="absolute right-0 top-0 bottom-0 w-2 z-10 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
+                <div data-resize-handle className="absolute right-0 top-0 bottom-0 w-2 z-10 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} aria-hidden />
               </TableHead>
             ))}
           </TableRow>

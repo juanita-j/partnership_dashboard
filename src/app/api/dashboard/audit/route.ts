@@ -39,19 +39,19 @@ function getDetailCategory(item: string): string {
   const t = item.trim();
   if (t.startsWith("파트너 삭제")) return "파트너 삭제";
   if (t.startsWith("파트너 추가")) return "파트너 추가";
-  if (t.startsWith("신규") || t.includes("건 추가") || t.includes("건 수정")) return "엑셀파일 업로드";
+  if (t.startsWith("신규") || t.includes("건 추가") || t.includes("건 수정")) return "신규 파일 추가";
   if (t.startsWith("회사:") || t.includes("회사:") || t === "파트너 수정") return "파트너 수정";
   return "기타";
 }
 
-/** 토글 열기 전 상세 칸: 유형별 건수로 요약, 콤마 구분, 중복 합침. 예: 파트너 삭제(4건), 파트너 추가(1건) */
+/** 토글 열기 전 상세 칸: 유형별 건수로 요약, 콤마 구분, 중복 합침. 예: 파트너 삭제(4건), 신규 파일 추가(1건) */
 function buildDetailSummary(detailItems: string[]): string {
   const countByCategory: Record<string, number> = {};
   for (const item of detailItems) {
     const cat = getDetailCategory(item);
     countByCategory[cat] = (countByCategory[cat] ?? 0) + 1;
   }
-  const order = ["파트너 삭제", "파트너 추가", "파트너 수정", "엑셀파일 업로드", "기타"];
+  const order = ["파트너 삭제", "파트너 추가", "파트너 수정", "신규 파일 추가", "기타"];
   return order
     .filter((cat) => (countByCategory[cat] ?? 0) > 0)
     .map((cat) => `${cat}(${countByCategory[cat]}건)`)

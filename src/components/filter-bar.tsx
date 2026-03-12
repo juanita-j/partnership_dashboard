@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -34,11 +35,27 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onApply, onRef
   const danRef = useRef<HTMLDivElement>(null);
   const giftRef = useRef<HTMLDivElement>(null);
   const showYearsRef = useRef<HTMLDivElement>(null);
+  const showYearsButtonRef = useRef<HTMLButtonElement>(null);
+  const showYearsMenuRef = useRef<HTMLDivElement>(null);
+  const [showYearsPosition, setShowYearsPosition] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!showYearsOpen) {
+      setShowYearsPosition(null);
+      return;
+    }
+    const btn = showYearsButtonRef.current;
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      setShowYearsPosition({ top: rect.bottom + 4, left: rect.left });
+    }
+  }, [showYearsOpen]);
 
   useEffect(() => {
     if (!showYearsOpen) return;
     const close = (e: MouseEvent) => {
-      if (showYearsRef.current?.contains(e.target as Node)) return;
+      const target = e.target as Node;
+      if (showYearsRef.current?.contains(target) || showYearsMenuRef.current?.contains(target)) return;
       setShowYearsOpen(false);
     };
     document.addEventListener("mousedown", close);
@@ -237,6 +254,7 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onApply, onRef
         <Label className="text-xs text-muted-foreground shrink-0">연도</Label>
         <div className="relative shrink-0" ref={showYearsRef}>
           <button
+            ref={showYearsButtonRef}
             type="button"
             onClick={() => setShowYearsOpen((o) => !o)}
             className={`${DROPDOWN_INPUT_CLASS} min-w-[7rem] text-left flex items-center justify-between gap-1`}
@@ -248,24 +266,32 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onApply, onRef
             </span>
             <span className="opacity-70 text-xs shrink-0">{showYearsOpen ? "▲" : "▼"}</span>
           </button>
-          {showYearsOpen && (
-            <div className="absolute left-0 top-full z-20 mt-1 min-w-[7rem] rounded-md border border-input bg-background p-2 shadow-md max-h-48 overflow-y-auto">
-              {eventYears.map((year) => {
-                const checked = selectedShowYears.includes(year);
-                return (
-                  <label key={year} className="flex items-center gap-2 cursor-pointer rounded px-2 py-1.5 text-sm hover:bg-muted/50">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleShowEventYear(year)}
-                      className="rounded border-input"
-                    />
-                    {year}년
-                  </label>
-                );
-              })}
-            </div>
-          )}
+          {showYearsOpen &&
+            showYearsPosition &&
+            typeof document !== "undefined" &&
+            createPortal(
+              <div
+                ref={showYearsMenuRef}
+                className="fixed z-[100] min-w-[7rem] rounded-md border border-input bg-background p-2 shadow-md max-h-48 overflow-y-auto"
+                style={{ top: showYearsPosition.top, left: showYearsPosition.left }}
+              >
+                {eventYears.map((year) => {
+                  const checked = selectedShowYears.includes(year);
+                  return (
+                    <label key={year} className="flex items-center gap-2 cursor-pointer rounded px-2 py-1.5 text-sm hover:bg-muted/50">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleShowEventYear(year)}
+                        className="rounded border-input"
+                      />
+                      {year}년
+                    </label>
+                  );
+                })}
+              </div>,
+              document.body
+            )}
         </div>
         {OPTIONAL_COLUMN_IDS.map((id) => (
           <label key={id} className="flex items-center gap-1.5 cursor-pointer text-sm shrink-0">

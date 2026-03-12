@@ -184,7 +184,23 @@ export default function AuditPage() {
           {entries.map((e, i) => (
             <div key={i} className="space-y-1">
               {e.kind === "엑셀" ? (
-                <p className="text-foreground">{e.detail}</p>
+                <div className="space-y-1">
+                  {e.detail.includes(" · ") ? (
+                    (() => {
+                      const idx = e.detail.indexOf(" · ");
+                      const filename = e.detail.slice(0, idx).trim();
+                      const rest = e.detail.slice(idx + 3).trim();
+                      return (
+                        <>
+                          <p className="text-foreground font-medium">파일명: {filename}</p>
+                          {rest ? <p className="text-muted-foreground">{rest}</p> : null}
+                        </>
+                      );
+                    })()
+                  ) : (
+                    <p className="text-foreground">{e.detail}</p>
+                  )}
+                </div>
               ) : (
                 <>
                   <p className="font-medium text-foreground">
