@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import type { FilterState, OptionalColumnId } from "@/app/dashboard/types";
 import { OPTIONAL_COLUMN_IDS, EMPLOYMENT_STATUS_VALUES } from "@/app/dashboard/types";
 const OPTIONAL_LABELS: Record<OptionalColumnId, string> = {
@@ -22,10 +23,11 @@ interface FilterBarProps {
   filters: FilterState;
   eventYears: number[];
   onFiltersChange: (f: FilterState) => void;
+  onApply: () => void;
   onRefresh: () => void;
 }
 
-export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: FilterBarProps) {
+export function FilterBar({ filters, eventYears, onFiltersChange, onApply, onRefresh }: FilterBarProps) {
   const [danOpen, setDanOpen] = useState(false);
   const [giftOpen, setGiftOpen] = useState(false);
   const danRef = useRef<HTMLDivElement>(null);
@@ -79,7 +81,7 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
       </div>
       <div className="space-y-3">
         <div className="rounded-md bg-gray-50/80 p-3">
-          <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 items-end">
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 items-end">
             <div className="min-w-0">
               <Label className="text-xs">재직상태</Label>
               <select
@@ -113,16 +115,25 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
               <Label className="text-xs">휴대폰</Label>
               <Input placeholder="검색" value={filters.phone} onChange={(e) => onFiltersChange({ ...filters, phone: e.target.value })} className="h-9 w-full px-2 py-1 text-sm mt-0.5" />
             </div>
+            <div className="min-w-0">
+              <Label className="text-xs">히스토리</Label>
+              <Input placeholder="검색" value={filters.history} onChange={(e) => onFiltersChange({ ...filters, history: e.target.value })} className="h-9 w-full px-2 py-1 text-sm mt-0.5" />
+            </div>
+            <div className="min-w-0 flex items-end pb-0.5">
+              <Button type="button" size="sm" onClick={onApply} className="h-9">
+                적용
+              </Button>
+            </div>
           </div>
         </div>
         <div className="rounded-md bg-gray-50/80 p-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Label className="text-xs font-medium shrink-0 w-24">DAN초청년도</Label>
+            <Label className="text-xs font-medium shrink-0 w-28 whitespace-nowrap">DAN초청년도</Label>
             <div className="relative shrink-0" ref={danRef}>
               <button
                 type="button"
                 onClick={() => setDanOpen((o) => !o)}
-                className={`${DROPDOWN_INPUT_CLASS} min-w-[7rem] text-left flex items-center justify-between gap-1`}
+                className={`${DROPDOWN_INPUT_CLASS} w-28 text-left flex items-center justify-between gap-1`}
               >
                 <span className="text-sm truncate">
                   {eventYears.filter((y) => !!(filters[`dan${y % 100}`] as boolean)).length > 0
@@ -132,7 +143,7 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
                 <span className="opacity-70 text-xs shrink-0">{danOpen ? "▲" : "▼"}</span>
               </button>
               {danOpen && (
-                <div className="absolute left-0 top-full z-20 mt-1 min-w-[7rem] rounded-md border border-input bg-background p-2 shadow-md">
+                <div className="absolute left-0 top-full z-20 mt-1 w-28 rounded-md border border-input bg-background p-2 shadow-md">
                   {eventYears.map((year) => {
                     const yy = year % 100;
                     const key = `dan${yy}` as keyof FilterState;
@@ -148,15 +159,15 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <Label className="text-xs text-muted-foreground">DAN초청인</Label>
-              <Input placeholder="검색" value={filters.inviter} onChange={(e) => onFiltersChange({ ...filters, inviter: e.target.value })} className={`${DROPDOWN_INPUT_CLASS} min-w-[7rem]`} />
+              <Label className="text-xs font-medium shrink-0 w-28 whitespace-nowrap">DAN초청인</Label>
+              <Input placeholder="검색" value={filters.inviter} onChange={(e) => onFiltersChange({ ...filters, inviter: e.target.value })} className={`${DROPDOWN_INPUT_CLASS} w-28`} />
             </div>
-            <Label className="text-xs font-medium shrink-0 w-24">선물발송년도</Label>
+            <Label className="text-xs font-medium shrink-0 w-28 whitespace-nowrap">선물발송년도</Label>
             <div className="relative shrink-0" ref={giftRef}>
               <button
                 type="button"
                 onClick={() => setGiftOpen((o) => !o)}
-                className={`${DROPDOWN_INPUT_CLASS} min-w-[7rem] text-left flex items-center justify-between gap-1`}
+                className={`${DROPDOWN_INPUT_CLASS} w-28 text-left flex items-center justify-between gap-1`}
               >
                 <span className="text-sm truncate">
                   {eventYears.filter((y) => !!(filters[`gift${y}`] as boolean)).length > 0
@@ -166,7 +177,7 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
                 <span className="opacity-70 text-xs shrink-0">{giftOpen ? "▲" : "▼"}</span>
               </button>
               {giftOpen && (
-                <div className="absolute left-0 top-full z-20 mt-1 min-w-[7rem] rounded-md border border-input bg-background p-2 shadow-md">
+                <div className="absolute left-0 top-full z-20 mt-1 w-28 rounded-md border border-input bg-background p-2 shadow-md">
                   {eventYears.map((year) => {
                     const yy = year % 100;
                     const key = `gift${year}` as keyof FilterState;
@@ -182,9 +193,12 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onRefresh }: F
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              <Label className="text-xs text-muted-foreground">선물발송인</Label>
-              <Input placeholder="검색" value={filters.giftSender} onChange={(e) => onFiltersChange({ ...filters, giftSender: e.target.value })} className={`${DROPDOWN_INPUT_CLASS} min-w-[7rem]`} />
+              <Label className="text-xs font-medium shrink-0 w-28 whitespace-nowrap">선물발송인</Label>
+              <Input placeholder="검색" value={filters.giftSender} onChange={(e) => onFiltersChange({ ...filters, giftSender: e.target.value })} className={`${DROPDOWN_INPUT_CLASS} w-28`} />
             </div>
+            <Button type="button" size="sm" onClick={onApply} className="h-9 shrink-0">
+              적용
+            </Button>
           </div>
         </div>
       </div>

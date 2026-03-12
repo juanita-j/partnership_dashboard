@@ -174,15 +174,19 @@ function buildOptionalColIdArrays(eventYears: number[]) {
 const DAN_YN_OPTIONS = ["", "Y", "N"];
 const GIFT_YN_OPTIONS = ["", "Y", "N"];
 
-/** Y/N·숫자만 나오는 컬럼은 좁게, 회사/이름은 넓게, 휴대폰/부서/직함/전자메일/주소는 넓히고 줄바꿈 방지 */
+/** Y/N·숫자만 나오는 컬럼은 좁게, 회사/이름은 넓게, 휴대폰/부서/직함/전자메일/주소는 넓히고 줄바꿈 방지. SHOW 옵션 컬럼은 라벨 겹침 방지용 min-width */
 function getColWidthClass(colId: string): string {
   if (colId === "company" || colId === "name") return "min-w-[7.5rem]";
   if (colId === "phone") return "min-w-[6.5rem] whitespace-nowrap";
   if (colId === "department" || colId === "title") return "min-w-[5rem] whitespace-nowrap";
   if (colId === "email") return "min-w-[8rem] whitespace-nowrap";
   if (colId === "address") return "min-w-[9rem] whitespace-nowrap";
-  if (/^dan\d+Invited$/.test(colId) || /^gift\d+Recipient$/.test(colId) || /^gift\d+Qty$/.test(colId))
-    return "w-14 min-w-[2.5rem]";
+  if (/^dan\d+Invited$/.test(colId)) return "min-w-[5rem] whitespace-nowrap";
+  if (/^dan\d+Inviter$/.test(colId)) return "min-w-[5rem] whitespace-nowrap";
+  if (/^gift\d+Recipient$/.test(colId)) return "min-w-[5rem] whitespace-nowrap";
+  if (/^gift\d+Item$/.test(colId)) return "min-w-[5rem] whitespace-nowrap";
+  if (/^gift\d+Qty$/.test(colId)) return "min-w-[5.5rem] whitespace-nowrap";
+  if (/^gift\d+Sender$/.test(colId)) return "min-w-[5rem] whitespace-nowrap";
   return "";
 }
 
@@ -922,7 +926,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                     {h.label}
                     {isActive && <span className="text-muted-foreground">{sortOrder === "asc" ? " ↑" : " ↓"}</span>}
                   </span>
-                  <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} aria-hidden />
+                  <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
                 </TableHead>
               );
             })}
@@ -932,7 +936,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
               return (
                 <TableHead
                   key={item.id}
-                  className={`relative whitespace-nowrap ${getColWidthClass(item.id)} ${sortField ? "cursor-pointer select-none hover:bg-muted/50" : ""}`}
+                  className={`relative whitespace-nowrap px-2 ${getColWidthClass(item.id)} ${sortField ? "cursor-pointer select-none hover:bg-muted/50" : ""}`}
                   style={getColStyle(item.id)}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -943,20 +947,20 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                     {item.label}
                     {isActive && <span className="text-muted-foreground">{sortOrder === "asc" ? " ↑" : " ↓"}</span>}
                   </span>
-                  <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(item.id, e)} aria-hidden />
+                  <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(item.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
                 </TableHead>
               );
             })}
             {showDan.map((h) => (
-              <TableHead key={h.id} className={`relative whitespace-nowrap ${getColWidthClass(h.id)}`} style={getColStyle(h.id)}>
+              <TableHead key={h.id} className={`relative whitespace-nowrap px-2 ${getColWidthClass(h.id)}`} style={getColStyle(h.id)}>
                 <span className="truncate block">{h.label}</span>
-                <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} aria-hidden />
+                <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
               </TableHead>
             ))}
             {showGift.map((h) => (
-              <TableHead key={h.id} className={`relative whitespace-nowrap ${getColWidthClass(h.id)}`} style={getColStyle(h.id)}>
+              <TableHead key={h.id} className={`relative whitespace-nowrap px-2 ${getColWidthClass(h.id)}`} style={getColStyle(h.id)}>
                 <span className="truncate block">{h.label}</span>
-                <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} aria-hidden />
+                <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
               </TableHead>
             ))}
           </TableRow>

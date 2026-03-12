@@ -80,7 +80,8 @@ function filtersToSearchParams(f: FilterState, eventYears: number[]): URLSearchP
 function DashboardContent() {
   const searchParams = useSearchParams();
   const [eventYears, setEventYears] = useState<number[]>(DEFAULT_EVENT_YEARS);
-  const [filters, setFiltersState] = useState<FilterState>(defaultFilters);
+  const [appliedFilters, setAppliedFiltersState] = useState<FilterState>(defaultFilters);
+  const [pendingFilters, setPendingFilters] = useState<FilterState>(defaultFilters);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const [excelOpen, setExcelOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -98,18 +99,25 @@ function DashboardContent() {
   }, []);
 
   useEffect(() => {
-    setFiltersState(filtersFromSearchParams(searchParams, eventYears));
+    const fromUrl = filtersFromSearchParams(searchParams, eventYears);
+    setAppliedFiltersState(fromUrl);
+    setPendingFilters(fromUrl);
   }, [searchParams, eventYears]);
 
-  const setFilters = useCallback(
+  const applyFilters = useCallback(
     (f: FilterState) => {
-      setFiltersState(f);
+      setAppliedFiltersState(f);
+      setPendingFilters(f);
       const q = filtersToSearchParams(f, eventYears).toString();
       const url = q ? `?${q}` : window.location.pathname;
       window.history.replaceState(null, "", url);
     },
     [eventYears]
   );
+
+  const handleApplyFilters = useCallback(() => {
+    applyFilters(pendingFilters);
+  }, [pendingFilters, applyFilters]);
 
   const refresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -124,7 +132,7 @@ function DashboardContent() {
   }, []);
 
   const exportUrl =
-    `/api/export/xlsx?${filtersToSearchParams(filters, eventYears).toString()}&columns=${encodeURIComponent(JSON.stringify(filters.showColumns))}`;
+    `/api/export/xlsx?${filtersToSearchParams(appliedFilters, eventYears).toString()}&columns=${encodeURIComponent(JSON.stringify(appliedFilters.showColumns))}`;
 
   return (
     <div className="space-y-4">
@@ -164,9 +172,15 @@ function DashboardContent() {
           )}
         </div>
       </div>
-      <FilterBar filters={filters} eventYears={eventYears} onFiltersChange={setFilters} onRefresh={refresh} />
+      <FilterBar
+        filters={pendingFilters}
+        eventYears={eventYears}
+        onFiltersChange={setPendingFilters}
+        onApply={handleApplyFilters}
+        onRefresh={refresh}
+      />
       <PartnersTable
-        filters={filters}
+        filters={appliedFilters}
         eventYears={eventYears}
         refreshKey={refreshKey}
         onSelectPartner={setSelectedPartnerId}

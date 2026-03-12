@@ -298,15 +298,6 @@ export function PartnerDetailSheet({
               />
             </div>
             <div className="grid gap-2">
-              <Label>HQ (본사 지역)</Label>
-              <Input
-                value={String(form.hq ?? "")}
-                onChange={(e) => setForm({ ...form, hq: e.target.value })}
-                placeholder="예: US, KR"
-                disabled={!canEdit}
-              />
-            </div>
-            <div className="grid gap-2">
               <Label>재직상태</Label>
               <select
                 value={String(form.employmentStatus ?? "재직")}
@@ -345,11 +336,10 @@ export function PartnerDetailSheet({
                 return (
                   <>
                     <div className="mb-2">
-                      <Label className="text-xs text-muted-foreground">연도</Label>
                       <select
                         value={y}
                         onChange={(e) => setSelectedEventYear(Number(e.target.value))}
-                        className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 pr-8 py-2 text-sm"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 pr-8 py-2 text-sm"
                       >
                         {yearList.map((yr) => (
                           <option key={yr} value={yr}>{yr}년</option>
@@ -401,7 +391,7 @@ export function PartnerDetailSheet({
                           <option value="Y">Y</option>
                           <option value="N">N</option>
                         </select>
-                        <Label>품목</Label>
+                        <Label>선물 품목</Label>
                         <Input
                           value={String(events[y]?.giftItem ?? "")}
                           onChange={(e) =>
@@ -412,7 +402,7 @@ export function PartnerDetailSheet({
                           }
                           disabled={!canEdit}
                         />
-                        <Label>발송 개수</Label>
+                        <Label>선물 발송 개수</Label>
                         <Input
                           value={String(events[y]?.giftQtyRaw ?? "")}
                           onChange={(e) =>
@@ -424,7 +414,7 @@ export function PartnerDetailSheet({
                           placeholder="ex. 1, 2, 3(숫자만 작성)"
                           disabled={!canEdit}
                         />
-                        <Label>발송인</Label>
+                        <Label>선물 발송인</Label>
                         <Input
                           value={String(events[y]?.giftSender ?? "")}
                           onChange={(e) =>
