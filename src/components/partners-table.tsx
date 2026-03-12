@@ -310,7 +310,28 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
     setResizing({ colId, startX: e.clientX, startW: colWidths[colId] ?? w });
   };
 
-  const getColStyle = (colId: string) => (colWidths[colId] != null ? { width: colWidths[colId], minWidth: colWidths[colId] } : undefined);
+  const getDefaultColWidthPx = (colId: string): number => {
+    if (colId === "employmentStatus") return 90;
+    if (colId === "company" || colId === "name") return 120;
+    if (colId === "phone") return 104;
+    if (colId === "department" || colId === "title") return 80;
+    if (colId === "email") return 128;
+    if (colId === "address") return 144;
+    if (/^dan\d+Invited$/.test(colId)) return 112;
+    if (/^dan\d+Inviter$/.test(colId)) return 104;
+    if (/^gift\d+Recipient$/.test(colId)) return 112;
+    if (/^gift\d+Item$/.test(colId)) return 104;
+    if (/^gift\d+Qty$/.test(colId)) return 128;
+    if (/^gift\d+Sender$/.test(colId)) return 112;
+    if (colId === "businessCardDate") return 110;
+    if (colId === "history") return 120;
+    return 100;
+  };
+
+  const getColStyle = (colId: string) => {
+    const w = colWidths[colId] ?? getDefaultColWidthPx(colId);
+    return { width: w, minWidth: w, maxWidth: w };
+  };
 
   useEffect(() => {
     if (!selectAllOpen) return;
@@ -833,7 +854,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
         )}
       </div>
       <div className="rounded-lg border overflow-x-auto">
-      <Table className="text-[13px] table-auto [&_th]:h-10 [&_td]:h-10 [&_th]:py-1.5 [&_td]:py-1.5">
+      <Table className="text-[13px] table-fixed [&_th]:h-10 [&_td]:h-10 [&_th]:py-1.5 [&_td]:py-1.5">
         <TableHeader>
           <TableRow className="h-10">
             <TableHead className="w-10 px-2 relative align-middle" onClick={(e) => e.stopPropagation()}>
@@ -927,7 +948,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                     {h.label}
                     {isActive && <span className="text-muted-foreground">{sortOrder === "asc" ? " ↑" : " ↓"}</span>}
                   </span>
-                  <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
+                  <div className="absolute right-0 top-0 bottom-0 w-2 z-10 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
                 </TableHead>
               );
             })}
@@ -948,20 +969,20 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                     {item.label}
                     {isActive && <span className="text-muted-foreground">{sortOrder === "asc" ? " ↑" : " ↓"}</span>}
                   </span>
-                  <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(item.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
+                  <div className="absolute right-0 top-0 bottom-0 w-2 z-10 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(item.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
                 </TableHead>
               );
             })}
             {showDan.map((h) => (
               <TableHead key={h.id} className={`relative whitespace-nowrap px-2 ${getColWidthClass(h.id)}`} style={getColStyle(h.id)}>
                 <span className="truncate block">{h.label}</span>
-                <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
+                <div className="absolute right-0 top-0 bottom-0 w-2 z-10 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
               </TableHead>
             ))}
             {showGift.map((h) => (
               <TableHead key={h.id} className={`relative whitespace-nowrap px-2 ${getColWidthClass(h.id)}`} style={getColStyle(h.id)}>
                 <span className="truncate block">{h.label}</span>
-                <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
+                <div className="absolute right-0 top-0 bottom-0 w-2 z-10 cursor-col-resize hover:bg-primary/30 shrink-0" onMouseDown={(e) => handleResizeStart(h.id, e)} onClick={(e) => e.stopPropagation()} aria-hidden />
               </TableHead>
             ))}
           </TableRow>

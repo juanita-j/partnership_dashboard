@@ -99,7 +99,7 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onApply, onRef
       <div className="font-medium text-sm rounded py-1.5 px-2 bg-gray-600 text-white">
         FILTER
       </div>
-      <div className="space-y-3">
+      <div className="space-y-3 !mt-1">
         <div className="rounded-md bg-gray-50/80 p-3">
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 items-end">
             <div className="min-w-0">
@@ -233,7 +233,7 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onApply, onRef
       <div className="font-medium text-sm mt-4 rounded py-1.5 px-2 bg-gray-300 text-gray-900">
         SHOW
       </div>
-      <div className="flex flex-nowrap items-center justify-center gap-2 rounded-md bg-gray-50/80 p-3 overflow-x-auto">
+      <div className="flex flex-nowrap items-center gap-2 rounded-md bg-gray-50/80 p-3 overflow-x-auto !mt-1">
         <Label className="text-xs text-muted-foreground shrink-0">연도</Label>
         <div className="relative shrink-0" ref={showYearsRef}>
           <button
