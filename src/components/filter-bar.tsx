@@ -30,8 +30,20 @@ interface FilterBarProps {
 export function FilterBar({ filters, eventYears, onFiltersChange, onApply, onRefresh }: FilterBarProps) {
   const [danOpen, setDanOpen] = useState(false);
   const [giftOpen, setGiftOpen] = useState(false);
+  const [showYearsOpen, setShowYearsOpen] = useState(false);
   const danRef = useRef<HTMLDivElement>(null);
   const giftRef = useRef<HTMLDivElement>(null);
+  const showYearsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showYearsOpen) return;
+    const close = (e: MouseEvent) => {
+      if (showYearsRef.current?.contains(e.target as Node)) return;
+      setShowYearsOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [showYearsOpen]);
 
   useEffect(() => {
     if (!danOpen) return;
@@ -58,6 +70,14 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onApply, onRef
       ...filters,
       showColumns: show ? filters.showColumns.filter((c) => c !== id) : [...filters.showColumns, id],
     });
+  };
+
+  const selectedShowYears = filters.showEventYears ?? [];
+  const toggleShowEventYear = (year: number) => {
+    const next = selectedShowYears.includes(year)
+      ? selectedShowYears.filter((y) => y !== year)
+      : [...selectedShowYears, year].sort((a, b) => a - b);
+    onFiltersChange({ ...filters, showEventYears: next });
   };
 
   const toggleDanYear = (year: number) => {
@@ -206,7 +226,40 @@ export function FilterBar({ filters, eventYears, onFiltersChange, onApply, onRef
       <div className="font-medium text-sm mt-4 rounded py-1.5 px-2 bg-gray-300 text-gray-900">
         SHOW
       </div>
-      <div className="flex flex-wrap gap-2 rounded-md bg-gray-50/80 p-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-md bg-gray-50/80 p-3">
+        <div className="relative shrink-0" ref={showYearsRef}>
+          <Label className="text-xs text-muted-foreground mr-1.5 shrink-0">연도</Label>
+          <button
+            type="button"
+            onClick={() => setShowYearsOpen((o) => !o)}
+            className={`${DROPDOWN_INPUT_CLASS} min-w-[7rem] text-left flex items-center justify-between gap-1`}
+          >
+            <span className="text-sm truncate">
+              {selectedShowYears.length === 0
+                ? "전체"
+                : selectedShowYears.map((y) => `${y}년`).join(", ")}
+            </span>
+            <span className="opacity-70 text-xs shrink-0">{showYearsOpen ? "▲" : "▼"}</span>
+          </button>
+          {showYearsOpen && (
+            <div className="absolute left-0 top-full z-20 mt-1 min-w-[7rem] rounded-md border border-input bg-background p-2 shadow-md max-h-48 overflow-y-auto">
+              {eventYears.map((year) => {
+                const checked = selectedShowYears.includes(year);
+                return (
+                  <label key={year} className="flex items-center gap-2 cursor-pointer rounded px-2 py-1.5 text-sm hover:bg-muted/50">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleShowEventYear(year)}
+                      className="rounded border-input"
+                    />
+                    {year}년
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
         {OPTIONAL_COLUMN_IDS.map((id) => (
           <label key={id} className="flex items-center gap-1.5 cursor-pointer text-sm">
             <input

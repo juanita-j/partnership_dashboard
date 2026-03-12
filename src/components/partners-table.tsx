@@ -174,19 +174,20 @@ function buildOptionalColIdArrays(eventYears: number[]) {
 const DAN_YN_OPTIONS = ["", "Y", "N"];
 const GIFT_YN_OPTIONS = ["", "Y", "N"];
 
-/** Y/N·숫자만 나오는 컬럼은 좁게, 회사/이름은 넓게, 휴대폰/부서/직함/전자메일/주소는 넓히고 줄바꿈 방지. SHOW 옵션 컬럼은 라벨 겹침 방지용 min-width */
+/** Y/N·숫자만 나오는 컬럼은 좁게, 회사/이름은 넓게, 휴대폰/부서/직함/전자메일/주소는 넓히고 줄바꿈 방지. SHOW 옵션 컬럼은 기본 너비를 넓게 고정해 라벨 겹침 방지 */
 function getColWidthClass(colId: string): string {
   if (colId === "company" || colId === "name") return "min-w-[7.5rem]";
   if (colId === "phone") return "min-w-[6.5rem] whitespace-nowrap";
   if (colId === "department" || colId === "title") return "min-w-[5rem] whitespace-nowrap";
   if (colId === "email") return "min-w-[8rem] whitespace-nowrap";
   if (colId === "address") return "min-w-[9rem] whitespace-nowrap";
-  if (/^dan\d+Invited$/.test(colId)) return "min-w-[5rem] whitespace-nowrap";
-  if (/^dan\d+Inviter$/.test(colId)) return "min-w-[5rem] whitespace-nowrap";
-  if (/^gift\d+Recipient$/.test(colId)) return "min-w-[5rem] whitespace-nowrap";
-  if (/^gift\d+Item$/.test(colId)) return "min-w-[5rem] whitespace-nowrap";
-  if (/^gift\d+Qty$/.test(colId)) return "min-w-[5.5rem] whitespace-nowrap";
-  if (/^gift\d+Sender$/.test(colId)) return "min-w-[5rem] whitespace-nowrap";
+  /* 초청여부·초청인·선물수신·품목·발송개수·발송인: 고정 너비로 겹침 방지 */
+  if (/^dan\d+Invited$/.test(colId)) return "w-[7rem] min-w-[7rem] whitespace-nowrap";
+  if (/^dan\d+Inviter$/.test(colId)) return "w-[6.5rem] min-w-[6.5rem] whitespace-nowrap";
+  if (/^gift\d+Recipient$/.test(colId)) return "w-[7rem] min-w-[7rem] whitespace-nowrap";
+  if (/^gift\d+Item$/.test(colId)) return "w-[6.5rem] min-w-[6.5rem] whitespace-nowrap";
+  if (/^gift\d+Qty$/.test(colId)) return "w-[8rem] min-w-[8rem] whitespace-nowrap";
+  if (/^gift\d+Sender$/.test(colId)) return "w-[7rem] min-w-[7rem] whitespace-nowrap";
   return "";
 }
 
@@ -832,7 +833,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
         )}
       </div>
       <div className="rounded-lg border overflow-x-auto">
-      <Table className="text-[13px] table-fixed [&_th]:h-10 [&_td]:h-10 [&_th]:py-1.5 [&_td]:py-1.5">
+      <Table className="text-[13px] table-auto [&_th]:h-10 [&_td]:h-10 [&_th]:py-1.5 [&_td]:py-1.5">
         <TableHeader>
           <TableRow className="h-10">
             <TableHead className="w-10 px-2 relative align-middle" onClick={(e) => e.stopPropagation()}>
