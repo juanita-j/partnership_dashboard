@@ -207,7 +207,19 @@ export async function getConfluenceDebugInfo(): Promise<ConfluenceDebugInfo> {
 
   const config = getConfig();
   if (!config) {
-    return { ...empty, error: "CONFLUENCE_BASE_URL, CONFLUENCE_PAGE_ID, CONFLUENCE_EMAIL, CONFLUENCE_API_TOKEN 중 하나 이상이 비어 있음." };
+    const envCheck = {
+      CONFLUENCE_BASE_URL: !!(process.env.CONFLUENCE_BASE_URL ?? "").trim(),
+      CONFLUENCE_PAGE_ID: !!(process.env.CONFLUENCE_PAGE_ID ?? "").trim(),
+      CONFLUENCE_EMAIL: !!(process.env.CONFLUENCE_EMAIL ?? "").trim(),
+      CONFLUENCE_API_TOKEN: !!(process.env.CONFLUENCE_API_TOKEN ?? "").trim(),
+    };
+    const missing = Object.entries(envCheck)
+      .filter(([, v]) => !v)
+      .map(([k]) => k);
+    return {
+      ...empty,
+      error: `다음 환경 변수가 비어 있음: ${missing.join(", ")}. (설정된 것: ${JSON.stringify(envCheck)})`,
+    };
   }
 
   let pageIdUsed = config.pageId;
