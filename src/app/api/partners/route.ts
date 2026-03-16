@@ -127,8 +127,8 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const page = q.page;
-    const limit = q.limit;
+    const page = q.page ?? 1;
+    const limit = q.limit ?? 50;
     const employmentStatus = q.employmentStatus ?? "";
     const name = q.name ?? "";
     const company = q.company ?? "";
