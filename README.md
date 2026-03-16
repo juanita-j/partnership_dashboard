@@ -39,6 +39,23 @@ DASHBOARD_ALLOWED_IDS="user1@example.com,user2@example.com"
 - `DASHBOARD_PASSWORD`: **(선택)** 대시보드 접속용 비밀번호. 설정하면 `/dashboard` 및 하위 경로 접속 시 ID·비밀번호 입력 화면이 먼저 나오며, **허용된 ID**와 이 비밀번호를 모두 맞게 입력해야 접속 가능합니다. 비우거나 설정하지 않으면 비밀번호 없이 접속 가능(로컬 개발용).
 - `DASHBOARD_ALLOWED_IDS`: **(선택, DASHBOARD_PASSWORD 사용 시 필수)** 접속을 허용할 ID(이메일 주소) 목록. 쉼표로 구분하며, 여러 개 입력·수정 가능. 예: `a@naver.com,b@naver.com`
 
+#### Confluence를 파트너 데이터 소스로 사용할 때
+
+파트너 목록·상세·엑셀 내보내기를 **Neon DB 대신 Confluence 페이지 첨부 엑셀**에서 읽으려면 아래 네 개를 설정합니다. 설정 시 대시보드의 파트너 데이터는 해당 Confluence 페이지에 올린 **엑셀(.xlsx/.xls) 첨부 파일**을 파싱해 표시합니다.
+
+```env
+CONFLUENCE_BASE_URL="https://wiki.navercorp.com"
+CONFLUENCE_PAGE_ID="123456789"
+CONFLUENCE_EMAIL="your-email@navercorp.com"
+CONFLUENCE_API_TOKEN="your-api-token"
+```
+
+- `CONFLUENCE_BASE_URL`: Confluence 사이트 주소 (context path 포함 시 예: `https://wiki.navercorp.com/wiki`)
+- `CONFLUENCE_PAGE_ID`: **페이지 ID(숫자)**. short link(예: `/x/WSw9JwE`)만 있는 경우, 해당 페이지를 브라우저에서 열고 URL이 `.../pages/123456789/제목` 형태로 바뀌면 그 중 **123456789**가 페이지 ID입니다.
+- `CONFLUENCE_EMAIL`, `CONFLUENCE_API_TOKEN`: Confluence REST API 인증용 (Basic Auth). API 토큰은 Confluence 계정 설정에서 발급합니다.
+
+위 네 변수를 모두 설정하면 파트너 목록/상세/엑셀 다운로드는 Confluence 첨부 엑셀에서만 읽고, 필터·정렬·페이지네이션 등 기존 조건과 UX는 그대로 유지됩니다. 로그인·저장된 필터·회사 별칭 등은 기존 DB(Neon 등)를 계속 사용합니다.
+
 ### 3. DB 마이그레이션 및 시드
 
 ```bash
