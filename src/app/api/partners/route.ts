@@ -155,8 +155,9 @@ export async function GET(req: NextRequest) {
       "history",
       "updatedAt",
     ] as const;
-    const orderByField = ALLOWED_SORT_FIELDS.includes(sortBy as (typeof ALLOWED_SORT_FIELDS)[number])
-      ? sortBy
+    type SortField = (typeof ALLOWED_SORT_FIELDS)[number];
+    const orderByField: SortField = ALLOWED_SORT_FIELDS.includes(sortBy as SortField)
+      ? (sortBy as SortField)
       : "updatedAt";
 
     const eventConditions: Record<string, unknown>[] = [];
