@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { stripCompanySuffix, upperLatin, normalizeCompany } from "@/lib/company";
 import { partnerUpdateSchema, EMPLOYMENT_STATUS_ENUM } from "@/lib/validations";
 import { getDashboardUserId, logAudit } from "@/lib/audit";
-import { isConfluenceConfigured, getPartnersFromConfluence } from "@/lib/confluence-partners";
+import { isConfluenceConfigured } from "@/lib/confluence";
+import { getPartnersFromConfluence } from "@/lib/confluence-partners";
 
 const YEARS = [2023, 2024, 2025];
 

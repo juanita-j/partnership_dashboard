@@ -3,11 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { normalizeCompany } from "@/lib/company";
 import type { Prisma } from "@prisma/client";
 import * as XLSX from "xlsx";
-import {
-  isConfluenceConfigured,
-  getPartnersFromConfluence,
-  filterPartners,
-} from "@/lib/confluence-partners";
+import { isConfluenceConfigured } from "@/lib/confluence";
+import { getPartnersFromConfluence, filterPartners } from "@/lib/confluence-partners";
 
 function toEventsByYear(
   events: {

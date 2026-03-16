@@ -5,8 +5,8 @@ import { stripCompanySuffixForDisplay } from "@/lib/company-display";
 import { partnerCreateSchema } from "@/lib/validations";
 import { getDashboardUserId, logAudit } from "@/lib/audit";
 import type { Prisma } from "@prisma/client";
+import { isConfluenceConfigured } from "@/lib/confluence";
 import {
-  isConfluenceConfigured,
   getPartnersFromConfluence,
   filterSortPaginatePartners,
   filterPartners,
