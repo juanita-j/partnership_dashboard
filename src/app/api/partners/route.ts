@@ -10,6 +10,7 @@ import {
   getPartnersFromConfluence,
   filterSortPaginatePartners,
   filterPartners,
+  type PartnerQueryParams,
 } from "@/lib/confluence-partners";
 
 type PartnerWithYearlyEvents = Prisma.PartnerGetPayload<{ include: { yearlyEvents: true } }>;
@@ -51,7 +52,7 @@ function toEventsByYear(
   return byYear;
 }
 
-function buildQueryParamsFromSearchParams(searchParams: URLSearchParams) {
+function buildQueryParamsFromSearchParams(searchParams: URLSearchParams): PartnerQueryParams {
   const dan: Record<number, boolean> = {};
   const danYn: Record<number, string> = {};
   const gift: Record<number, boolean> = {};
@@ -65,6 +66,8 @@ function buildQueryParamsFromSearchParams(searchParams: URLSearchParams) {
     const gy = searchParams.get(`gift${yy}Yn`) ?? "";
     if (gy) giftYn[yy] = gy;
   }
+  const sortOrder: "asc" | "desc" =
+    (searchParams.get("sortOrder") ?? "desc").toLowerCase() === "asc" ? "asc" : "desc";
   return {
     page: Math.max(1, parseInt(searchParams.get("page") ?? "1", 10)),
     limit: Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10))),
@@ -79,7 +82,7 @@ function buildQueryParamsFromSearchParams(searchParams: URLSearchParams) {
     inviter: (searchParams.get("inviter") ?? "").trim() || undefined,
     giftSender: (searchParams.get("giftSender") ?? "").trim() || undefined,
     sortBy: (searchParams.get("sortBy") ?? "").trim() || "updatedAt",
-    sortOrder: (searchParams.get("sortOrder") ?? "desc").toLowerCase() === "asc" ? "asc" : "desc",
+    sortOrder,
     idsOnly: searchParams.get("idsOnly") === "true",
     dan: Object.keys(dan).length ? dan : undefined,
     danYn: Object.keys(danYn).length ? danYn : undefined,
