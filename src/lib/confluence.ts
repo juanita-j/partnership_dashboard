@@ -243,13 +243,18 @@ export async function getConfluenceDebugInfo(): Promise<ConfluenceDebugInfo> {
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
+    const cause =
+      e instanceof Error && e.cause != null
+        ? (e.cause instanceof Error ? e.cause.message : String(e.cause))
+        : null;
+    const fullError = cause ? `${message} (원인: ${cause})` : message;
     return {
       configured: true,
       pageIdUsed: shortLinkResolved ? pageIdUsed : config.pageId,
       shortLinkResolved,
       attachmentCount: 0,
       attachmentNames: [],
-      error: message,
+      error: fullError,
     };
   }
 }
