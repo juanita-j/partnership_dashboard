@@ -184,3 +184,60 @@ export async function fetchExcelBuffersFromConfluence(): Promise<{ fileName: str
 export function isConfluenceConfigured(): boolean {
   return getConfig() !== null;
 }
+
+export interface ConfluenceDebugInfo {
+  configured: boolean;
+  pageIdUsed: string | null;
+  shortLinkResolved: boolean;
+  attachmentCount: number;
+  attachmentNames: string[];
+  error: string | null;
+}
+
+/** 디버그용: Confluence 설정·short link 해석·엑셀 첨부 개수·에러 메시지 반환 (비밀 노출 없음) */
+export async function getConfluenceDebugInfo(): Promise<ConfluenceDebugInfo> {
+  const empty: ConfluenceDebugInfo = {
+    configured: false,
+    pageIdUsed: null,
+    shortLinkResolved: false,
+    attachmentCount: 0,
+    attachmentNames: [],
+    error: null,
+  };
+
+  const config = getConfig();
+  if (!config) {
+    return { ...empty, error: "CONFLUENCE_BASE_URL, CONFLUENCE_PAGE_ID, CONFLUENCE_EMAIL, CONFLUENCE_API_TOKEN 중 하나 이상이 비어 있음." };
+  }
+
+  let pageIdUsed = config.pageId;
+  let shortLinkResolved = false;
+
+  try {
+    const resolved = await resolveConfigPageId(config);
+    shortLinkResolved = !isNumericPageId(config.pageId);
+    pageIdUsed = resolved.pageId;
+
+    const list = await fetchAttachmentList(resolved);
+    const names = list.map((a) => a.title);
+
+    return {
+      configured: true,
+      pageIdUsed,
+      shortLinkResolved,
+      attachmentCount: names.length,
+      attachmentNames: names,
+      error: null,
+    };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return {
+      configured: true,
+      pageIdUsed: shortLinkResolved ? pageIdUsed : config.pageId,
+      shortLinkResolved,
+      attachmentCount: 0,
+      attachmentNames: [],
+      error: message,
+    };
+  }
+}
