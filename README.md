@@ -51,7 +51,7 @@ CONFLUENCE_API_TOKEN="your-api-token"
 ```
 
 - `CONFLUENCE_BASE_URL`: Confluence 사이트 주소 (context path 포함 시 예: `https://wiki.navercorp.com/wiki`)
-- `CONFLUENCE_PAGE_ID`: **페이지 ID(숫자)**. short link(예: `/x/WSw9JwE`)만 있는 경우, 해당 페이지를 브라우저에서 열고 URL이 `.../pages/123456789/제목` 형태로 바뀌면 그 중 **123456789**가 페이지 ID입니다.
+- `CONFLUENCE_PAGE_ID`: **페이지 ID(숫자)** 또는 **short link 키**. 예: `https://wiki.navercorp.com/x/WSw9JwE` 이면 `WSw9JwE` 만 넣어도 됩니다. short key를 넣으면 앱이 리다이렉트로 숫자 페이지 ID를 자동 조회합니다. 숫자 ID를 직접 쓰려면 해당 페이지를 브라우저에서 열고 URL의 `.../pages/123456789/제목` 에서 **123456789** 를 넣으면 됩니다.
 - `CONFLUENCE_EMAIL`, `CONFLUENCE_API_TOKEN`: Confluence REST API 인증용 (Basic Auth). API 토큰은 Confluence 계정 설정에서 발급합니다.
 
 위 네 변수를 모두 설정하면 파트너 목록/상세/엑셀 다운로드는 Confluence 첨부 엑셀에서만 읽고, 필터·정렬·페이지네이션 등 기존 조건과 UX는 그대로 유지됩니다. 로그인·저장된 필터·회사 별칭 등은 기존 DB(Neon 등)를 계속 사용합니다.

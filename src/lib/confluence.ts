@@ -1,9 +1,13 @@
 /**
  * Confluence REST API client: list page attachments and download Excel files.
  * Base URL 예: https://wiki.navercorp.com (또는 context path 포함 시 https://wiki.navercorp.com/wiki)
+ * CONFLUENCE_PAGE_ID: 숫자 페이지 ID(예: 123456789) 또는 short link 키(예: WSw9JwE). short link면 리다이렉트로 페이지 ID를 조회합니다.
  */
 
 const EXCEL_EXT = [".xlsx", ".xls"];
+
+/** /pages/123456789/ 제목 형태에서 페이지 ID 추출 */
+const PAGE_ID_IN_URL = /\/pages\/(\d+)(?:\/|$)/i;
 
 export interface ConfluenceConfig {
   baseUrl: string;
@@ -19,6 +23,72 @@ function getConfig(): ConfluenceConfig | null {
   const apiToken = process.env.CONFLUENCE_API_TOKEN?.trim();
   if (!baseUrl || !pageId || !email || !apiToken) return null;
   return { baseUrl, pageId, email, apiToken };
+}
+
+/** 숫자만 있으면 true (페이지 ID), 아니면 short key(예: WSw9JwE) */
+function isNumericPageId(value: string): boolean {
+  return /^\d+$/.test(value);
+}
+
+/** short link 키로 페이지 URL 요청 후 리다이렉트 Location에서 페이지 ID 추출. 실패 시 null */
+const resolvedPageIdCache = new Map<string, string>();
+
+async function resolveShortLinkToPageId(config: ConfluenceConfig): Promise<string> {
+  const cacheKey = `${config.baseUrl}:${config.pageId}`;
+  const cached = resolvedPageIdCache.get(cacheKey);
+  if (cached) return cached;
+
+  const base = config.baseUrl.replace(/\/$/, "");
+  const shortUrl = `${base}/x/${config.pageId}`;
+  const auth = Buffer.from(`${config.email}:${config.apiToken}`).toString("base64");
+
+  let currentUrl: string = shortUrl;
+  const maxRedirects = 5;
+  for (let i = 0; i < maxRedirects; i++) {
+    const res = await fetch(currentUrl, {
+      method: "GET",
+      redirect: "manual",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        Accept: "text/html, application/json",
+      },
+    });
+
+    if (res.status === 200) {
+      const finalUrl = res.url || currentUrl;
+      const match = finalUrl.match(PAGE_ID_IN_URL);
+      if (match) {
+        const pageId = match[1];
+        resolvedPageIdCache.set(cacheKey, pageId);
+        return pageId;
+      }
+      break;
+    }
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get("location");
+      if (!location) break;
+      currentUrl = location.startsWith("http") ? location : new URL(location, base).href;
+      const match = currentUrl.match(PAGE_ID_IN_URL);
+      if (match) {
+        const pageId = match[1];
+        resolvedPageIdCache.set(cacheKey, pageId);
+        return pageId;
+      }
+      continue;
+    }
+    break;
+  }
+
+  throw new Error(
+    `Confluence short link를 페이지 ID로 변환할 수 없습니다. URL: ${shortUrl} (CONFLUENCE_PAGE_ID를 숫자 페이지 ID로 직접 설정해 보세요.)`
+  );
+}
+
+/** 설정된 pageId가 short key면 숫자 페이지 ID로 변환한 config 반환 */
+async function resolveConfigPageId(config: ConfluenceConfig): Promise<ConfluenceConfig> {
+  if (isNumericPageId(config.pageId)) return config;
+  const resolvedId = await resolveShortLinkToPageId(config);
+  return { ...config, pageId: resolvedId };
 }
 
 function isExcelFileName(title: string): boolean {
@@ -96,7 +166,8 @@ export async function fetchExcelBuffersFromConfluence(): Promise<{ fileName: str
     );
   }
 
-  const list = await fetchAttachmentList(config);
+  const resolvedConfig = await resolveConfigPageId(config);
+  const list = await fetchAttachmentList(resolvedConfig);
   if (list.length === 0) {
     return [];
   }
