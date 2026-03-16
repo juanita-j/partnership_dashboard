@@ -3,9 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { stripCompanySuffix, upperLatin, normalizeCompany } from "@/lib/company";
 import { partnerUpdateSchema, EMPLOYMENT_STATUS_ENUM } from "@/lib/validations";
 import { getDashboardUserId, logAudit } from "@/lib/audit";
-import { isConfluenceConfigured } from "@/lib/confluence";
-import { getPartnersFromConfluence } from "@/lib/confluence-partners";
-
 const YEARS = [2023, 2024, 2025];
 
 const FIELD_LABELS: Record<string, string> = {
@@ -97,24 +94,6 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-
-    if (isConfluenceConfigured()) {
-      const partners = await getPartnersFromConfluence();
-      const partner = partners.find((p) => p.id === id);
-      if (!partner) {
-        return NextResponse.json({ error: "Not found" }, { status: 404 });
-      }
-      const { normalized } = await normalizeCompany(
-        (partner.companyNormalized ?? "").trim(),
-        partner.email ?? undefined
-      );
-      return NextResponse.json({
-        ...partner,
-        companyNormalized: normalized || (partner.companyNormalized ?? ""),
-        eventsByYear: toEventsByYear(partner.yearlyEvents),
-      });
-    }
-
     const partner = await prisma.partner.findUnique({
       where: { id },
       include: { yearlyEvents: true },

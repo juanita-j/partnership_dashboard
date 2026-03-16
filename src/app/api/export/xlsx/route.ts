@@ -3,9 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { normalizeCompany } from "@/lib/company";
 import type { Prisma } from "@prisma/client";
 import * as XLSX from "xlsx";
-import { isConfluenceConfigured } from "@/lib/confluence";
-import { getPartnersFromConfluence, filterPartners } from "@/lib/confluence-partners";
-
 function toEventsByYear(
   events: {
     year: number;
@@ -177,41 +174,6 @@ function getCellValue(
 
 const YEAR_RANGE = { min: 2023, max: 2030 };
 
-function buildExportQueryParams(searchParams: URLSearchParams) {
-  const dan: Record<number, boolean> = {};
-  const danYn: Record<number, string> = {};
-  const gift: Record<number, boolean> = {};
-  const giftYn: Record<number, string> = {};
-  for (let year = YEAR_RANGE.min; year <= YEAR_RANGE.max; year++) {
-    const yy = year % 100;
-    if (searchParams.get(`dan${yy}`) === "true") dan[yy] = true;
-    const dy = searchParams.get(`dan${yy}Yn`) ?? "";
-    if (dy) danYn[yy] = dy;
-    if (searchParams.get(`gift${year}`) === "true") gift[year] = true;
-    const gy = searchParams.get(`gift${yy}Yn`) ?? "";
-    if (gy) giftYn[yy] = gy;
-  }
-  const idsParam = (searchParams.get("ids") ?? "").trim();
-  const ids = idsParam ? idsParam.split(",").map((id) => id.trim()).filter(Boolean) : undefined;
-  return {
-    employmentStatus: (searchParams.get("employmentStatus") ?? "").trim() || undefined,
-    name: (searchParams.get("name") ?? "").trim() || undefined,
-    company: (searchParams.get("company") ?? "").trim() || undefined,
-    department: (searchParams.get("department") ?? "").trim() || undefined,
-    title: (searchParams.get("title") ?? "").trim() || undefined,
-    phone: (searchParams.get("phone") ?? "").trim() || undefined,
-    email: (searchParams.get("email") ?? "").trim() || undefined,
-    history: (searchParams.get("history") ?? "").trim() || undefined,
-    inviter: (searchParams.get("inviter") ?? "").trim() || undefined,
-    giftSender: (searchParams.get("giftSender") ?? "").trim() || undefined,
-    ids,
-    dan: Object.keys(dan).length ? dan : undefined,
-    danYn: Object.keys(danYn).length ? danYn : undefined,
-    gift: Object.keys(gift).length ? gift : undefined,
-    giftYn: Object.keys(giftYn).length ? giftYn : undefined,
-  };
-}
-
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -234,72 +196,6 @@ export async function GET(req: NextRequest) {
     }
     const idsParam = (searchParams.get("ids") ?? "").trim();
     const filterIds = idsParam ? idsParam.split(",").map((id) => id.trim()).filter(Boolean) : null;
-
-    if (isConfluenceConfigured()) {
-      const allPartners = await getPartnersFromConfluence();
-      const filterParams = buildExportQueryParams(searchParams);
-      const partners = filterPartners(allPartners, filterParams);
-      const eventYearsSet = new Set<number>();
-      for (const p of partners) {
-        for (const ev of p.yearlyEvents) eventYearsSet.add(ev.year);
-      }
-      const eventYears = eventYearsSet.size
-        ? Array.from(eventYearsSet).sort((a, b) => a - b)
-        : [2023, 2024, 2025];
-      const DAN_COLUMNS = buildDanColumns(eventYears);
-      const GIFT_COLUMNS = buildGiftColumns(eventYears);
-
-      const rows = await Promise.all(
-        partners.map(async (p) => {
-          const { normalized } = await normalizeCompany(
-            (p.companyNormalized ?? "").trim(),
-            p.email ?? undefined
-          );
-          return {
-            ...p,
-            companyNormalized: normalized || (p.companyNormalized ?? ""),
-            eventsByYear: toEventsByYear(p.yearlyEvents),
-          };
-        })
-      );
-
-      const columns: { key: string; label: string }[] = [...FIXED_COLUMNS];
-      if (showColumns.includes("businessCardDate")) columns.push(OPTIONAL_COLUMNS[0]);
-      if (showColumns.includes("history")) columns.push(OPTIONAL_COLUMNS[1]);
-      if (showColumns.includes("danInvited")) columns.push(...DAN_COLUMNS.filter((c) => c.key.endsWith("Invited")));
-      if (showColumns.includes("inviter")) columns.push(...DAN_COLUMNS.filter((c) => c.key.endsWith("Inviter")));
-      if (showColumns.includes("giftRecipient")) columns.push(...GIFT_COLUMNS.filter((c) => c.key.endsWith("Recipient")));
-      if (showColumns.includes("giftItem")) columns.push(...GIFT_COLUMNS.filter((c) => c.key.endsWith("Item")));
-      if (showColumns.includes("giftQty")) columns.push(...GIFT_COLUMNS.filter((c) => c.key.endsWith("Qty")));
-      if (showColumns.includes("giftSender")) columns.push(...GIFT_COLUMNS.filter((c) => c.key.endsWith("Sender")));
-      const danFilterOn = eventYears.some((y) => searchParams.get(`dan${y % 100}`) === "true" || (searchParams.get(`dan${y % 100}Yn`) ?? "") !== "");
-      if (danFilterOn) columns.push(...DAN_COLUMNS);
-      const giftFilterOn = eventYears.some((y) => searchParams.get(`gift${y}`) === "true" || (searchParams.get(`gift${y % 100}Yn`) ?? "") !== "") || giftSender !== "";
-      if (giftFilterOn) {
-        for (const y of eventYears) {
-          const yy = y % 100;
-          if (searchParams.get(`gift${y}`) === "true" || (searchParams.get(`gift${yy}Yn`) ?? "") !== "" || giftSender !== "")
-            columns.push(...GIFT_COLUMNS.filter((c) => c.key.startsWith(`gift${yy}`)));
-        }
-      }
-      const columnsDeduped = columns.filter((c, i) => columns.findIndex((x) => x.key === c.key) === i);
-      const headerRow = columnsDeduped.map((c) => c.label);
-      const dataRows = rows.map((p) => columnsDeduped.map((c) => getCellValue(p, c.key)));
-      const ws = XLSX.utils.aoa_to_sheet([headerRow, ...dataRows]);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "파트너");
-      const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-      const now = new Date();
-      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
-      const timeStr = now.toTimeString().slice(0, 5).replace(":", "");
-      const filename = `partner_dashboard_export_${dateStr}_${timeStr}.xlsx`;
-      return new NextResponse(buf, {
-        headers: {
-          "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "Content-Disposition": `attachment; filename="${filename}"`,
-        },
-      });
-    }
 
     const eventYearsRows = await prisma.yearlyEvent.findMany({
       select: { year: true },
