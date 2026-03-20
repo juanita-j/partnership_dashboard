@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
 const SESSION_KEY = "dashboard_auth";
@@ -68,21 +69,35 @@ export function DashboardLayoutClient({
     );
   }
 
+  const isPartnerList = pathname === "/dashboard";
+  const isExecutiveCounterpart = pathname.startsWith("/dashboard/executive-counterpart");
+  const isCompanyAlias = pathname.startsWith("/dashboard/company-alias");
+  const isAudit = pathname.startsWith("/dashboard/audit");
+
+  const navInactive = "text-sm font-normal text-gray-400 hover:text-gray-200 transition-colors";
+  const navActive = "text-sm font-bold text-white transition-colors";
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-gray-700 bg-gray-800 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="font-semibold text-lg text-white">
+          <Link
+            href="/dashboard"
+            className={cn(
+              "text-lg transition-colors",
+              isPartnerList ? "font-bold text-white" : "font-semibold text-gray-400 hover:text-gray-200"
+            )}
+          >
             파트너사 DB 대시보드
           </Link>
           <nav className="flex gap-4">
-            <Link href="/dashboard/executive-counterpart" className="text-sm text-gray-400 hover:text-gray-200">
+            <Link href="/dashboard/executive-counterpart" className={isExecutiveCounterpart ? navActive : navInactive}>
               임원진 카운터파트
             </Link>
-            <Link href="/dashboard/company-alias" className="text-sm text-gray-400 hover:text-gray-200">
+            <Link href="/dashboard/company-alias" className={isCompanyAlias ? navActive : navInactive}>
               회사명 매핑 조건
             </Link>
-            <Link href="/dashboard/audit" className="text-sm text-gray-400 hover:text-gray-200">
+            <Link href="/dashboard/audit" className={isAudit ? navActive : navInactive}>
               업데이트 이력
             </Link>
           </nav>
