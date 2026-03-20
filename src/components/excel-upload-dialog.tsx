@@ -23,9 +23,19 @@ interface ExcelUploadDialogProps {
   open: boolean;
   onClose: () => void;
   onApplied: () => void;
+  /** 기본 `/api`, 임원진은 `/api/executive` */
+  apiRoot?: string;
+  /** 감사 로그(import_apply) 구분용. 예: `executive_counterpart` */
+  importSource?: string;
 }
 
-export function ExcelUploadDialog({ open, onClose, onApplied }: ExcelUploadDialogProps) {
+export function ExcelUploadDialog({
+  open,
+  onClose,
+  onApplied,
+  apiRoot = "/api",
+  importSource,
+}: ExcelUploadDialogProps) {
   const [file, setFile] = useState<File | null>(null);
   const [diff, setDiff] = useState<MergeDiffItem[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,7 +58,7 @@ export function ExcelUploadDialog({ open, onClose, onApplied }: ExcelUploadDialo
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch("/api/import/excel", {
+      const res = await fetch(`${apiRoot}/import/excel`, {
         method: "POST",
         body: form,
       });
@@ -81,7 +91,7 @@ export function ExcelUploadDialog({ open, onClose, onApplied }: ExcelUploadDialo
     try {
       for (let i = 0; i < diff.length; i += CHUNK_SIZE) {
         const chunk = diff.slice(i, i + CHUNK_SIZE);
-        const res = await fetch("/api/import/apply", {
+        const res = await fetch(`${apiRoot}/import/apply`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ diff: chunk }),
@@ -98,7 +108,12 @@ export function ExcelUploadDialog({ open, onClose, onApplied }: ExcelUploadDialo
         await fetch("/api/dashboard/audit/log-import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ created: totalCreated, updated: totalUpdated, filename: file?.name ?? "" }),
+          body: JSON.stringify({
+            created: totalCreated,
+            updated: totalUpdated,
+            filename: file?.name ?? "",
+            ...(importSource ? { source: importSource } : {}),
+          }),
         });
       } catch {
         // 이력 기록 실패해도 적용 완료는 유지

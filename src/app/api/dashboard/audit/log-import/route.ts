@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
     const created = typeof body.created === "number" ? body.created : 0;
     const updated = typeof body.updated === "number" ? body.updated : 0;
     const filename = typeof body.filename === "string" ? body.filename.trim() || undefined : undefined;
-    await logAudit(userId, "import_apply", null, JSON.stringify({ created, updated, filename }));
+    const source = typeof body.source === "string" ? body.source.trim() || undefined : undefined;
+    await logAudit(userId, "import_apply", null, JSON.stringify({ created, updated, filename, source }));
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[log-import]", e);

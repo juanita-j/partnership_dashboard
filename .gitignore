@@ -51,5 +51,8 @@ next-env.d.ts
 coverage/
 .nyc_output/
 
+# Prisma (임원진 전용 클라이언트 생성물 — postinstall에서 재생성)
+src/generated/
+
 # Misc
 *.pem

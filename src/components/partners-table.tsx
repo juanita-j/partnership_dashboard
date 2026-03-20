@@ -53,6 +53,8 @@ interface PartnersTableProps {
   /** SHOW 칼럼 표시용 (미전달 시 filters 사용). 적용 버튼 없이 즉시 반영 */
   displayShowColumns?: FilterState["showColumns"];
   displayShowEventYears?: number[];
+  /** API 베이스. 기본 `/api`, 임원진은 `/api/executive` */
+  apiRoot?: string;
 }
 
 /** 헤더 colId → API sortBy 필드명 */
@@ -266,7 +268,17 @@ function getCellValue(p: PartnerRow, colId: string): string {
   }
 }
 
-export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner, onRefresh, canEdit, displayShowColumns, displayShowEventYears }: PartnersTableProps) {
+export function PartnersTable({
+  filters,
+  eventYears,
+  refreshKey,
+  onSelectPartner,
+  onRefresh,
+  canEdit,
+  displayShowColumns,
+  displayShowEventYears,
+  apiRoot = "/api",
+}: PartnersTableProps) {
   const [data, setData] = useState<PartnerRow[]>([]);
   const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 });
   const [loading, setLoading] = useState(true);
@@ -404,7 +416,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
   useEffect(() => {
     setLoading(true);
     const q = buildQuery(filters, currentPage, eventYears, sortBy, sortOrder);
-    fetch(`/api/partners?${q}`)
+    fetch(`${apiRoot}/partners?${q}`)
       .then((r) => r.json())
       .then((res) => {
         if (res.data) setData(res.data);
@@ -413,7 +425,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
       })
       .catch(() => setData([]))
       .finally(() => setLoading(false));
-  }, [filters, refreshKey, currentPage, eventYears, sortBy, sortOrder]);
+  }, [filters, refreshKey, currentPage, eventYears, sortBy, sortOrder, apiRoot]);
 
   const showOptional = OPTIONAL_HEADERS.filter((h) => effectiveShowColumns.includes(h.id));
   const nonEventExpanded = showOptional
@@ -460,7 +472,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
       list.map((p) => (p.id === partnerId ? { ...p, employmentStatus: value } : p))
     );
     try {
-      const res = await fetch(`/api/partners/${partnerId}`, {
+      const res = await fetch(`${apiRoot}/partners/${partnerId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ employmentStatus: value }),
@@ -497,7 +509,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
     setEditingHistoryId(null);
     setEditingHistoryValue("");
     try {
-      const res = await fetch(`/api/partners/${partnerId}`, {
+      const res = await fetch(`${apiRoot}/partners/${partnerId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ history: valueToSave }),
@@ -547,7 +559,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
     const ids = Array.from(selectedIds);
     try {
       for (const id of ids) {
-        const res = await fetch(`/api/partners/${id}`, { method: "DELETE" });
+        const res = await fetch(`${apiRoot}/partners/${id}`, { method: "DELETE" });
         if (!res.ok) throw new Error("삭제 실패");
       }
       setData((list) => list.filter((p) => !selectedIds.has(p.id)));
@@ -568,7 +580,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
       list.map((p) => (p.id === partnerId ? { ...p, [field]: value } : p))
     );
     try {
-      const res = await fetch(`/api/partners/${partnerId}`, {
+      const res = await fetch(`${apiRoot}/partners/${partnerId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ [field]: value }),
@@ -609,7 +621,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
       })
     );
     try {
-      const res = await fetch(`/api/partners/${partnerId}/events`, {
+      const res = await fetch(`${apiRoot}/partners/${partnerId}/events`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -837,7 +849,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
 
   const selectedExportUrl =
     selectedIds.size > 0 && typeof window !== "undefined"
-      ? `/api/export/xlsx?ids=${encodeURIComponent(Array.from(selectedIds).join(","))}&columns=${encodeURIComponent(JSON.stringify(filters.showColumns))}`
+      ? `${apiRoot}/export/xlsx?ids=${encodeURIComponent(Array.from(selectedIds).join(","))}&columns=${encodeURIComponent(JSON.stringify(filters.showColumns))}`
       : null;
 
   return (
@@ -922,7 +934,7 @@ export function PartnersTable({ filters, eventYears, refreshKey, onSelectPartner
                       setSelectAllPagesLoading(true);
                       try {
                         const q = buildIdsOnlyQuery(filters, eventYears, sortBy, sortOrder);
-                        const res = await fetch(`/api/partners?${q}`);
+                        const res = await fetch(`${apiRoot}/partners?${q}`);
                         if (!res.ok) throw new Error("조회 실패");
                         const json = await res.json();
                         const ids = Array.isArray(json.ids) ? json.ids : [];

@@ -39,6 +39,19 @@ DASHBOARD_ALLOWED_IDS="user1@example.com,user2@example.com"
 - `DASHBOARD_PASSWORD`: **(선택)** 대시보드 접속용 비밀번호. 설정하면 `/dashboard` 및 하위 경로 접속 시 ID·비밀번호 입력 화면이 먼저 나오며, **허용된 ID**와 이 비밀번호를 모두 맞게 입력해야 접속 가능합니다. 비우거나 설정하지 않으면 비밀번호 없이 접속 가능(로컬 개발용).
 - `DASHBOARD_ALLOWED_IDS`: **(선택, DASHBOARD_PASSWORD 사용 시 필수)** 접속을 허용할 ID(이메일 주소) 목록. 쉼표로 구분하며, 여러 개 입력·수정 가능. 예: `a@naver.com,b@naver.com`
 
+#### 임원진 카운터파트 (별도 DB)
+
+메인 `DATABASE_URL`과 분리된 PostgreSQL 등에 **임원진 카운터파트** 전용 데이터를 두려면 아래를 설정합니다.
+
+```env
+EXECUTIVE_COUNTERPART_DATABASE_URL="postgresql://..."
+```
+
+- 대시보드 **「임원진 카운터파트」** 탭은 이 URL의 DB만 사용합니다 (엑셀 업로드·목록·상세·보내기).
+- 스키마 적용: `npm run db:push:executive` (또는 `prisma/executive-counterpart.prisma` 기준 migrate)
+- Vercel 등 배포 시 메인 DB와 **별도** 환경 변수로 등록해야 합니다.
+- 미설정 시 해당 API는 503을 반환하고, 탭에서 데이터를 불러오지 못할 수 있습니다.
+
 #### Confluence를 파트너 데이터 소스로 사용할 때
 
 파트너 목록·상세·엑셀 내보내기를 **Neon DB 대신 Confluence 페이지 첨부 엑셀**에서 읽으려면 아래 네 개를 설정합니다. 설정 시 대시보드의 파트너 데이터는 해당 Confluence 페이지에 올린 **엑셀(.xlsx/.xls) 첨부 파일**을 파싱해 표시합니다.

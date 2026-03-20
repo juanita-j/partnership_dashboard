@@ -76,6 +76,9 @@ export function DashboardLayoutClient({
             파트너사 DB 대시보드
           </Link>
           <nav className="flex gap-4">
+            <Link href="/dashboard/executive-counterpart" className="text-sm text-gray-400 hover:text-gray-200">
+              임원진 카운터파트
+            </Link>
             <Link href="/dashboard/company-alias" className="text-sm text-gray-400 hover:text-gray-200">
               회사명 매핑 조건
             </Link>

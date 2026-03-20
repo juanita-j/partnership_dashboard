@@ -49,6 +49,8 @@ interface PartnerDetailSheetProps {
   onClose: () => void;
   onSaved: () => void;
   canEdit: boolean;
+  /** 기본 `/api`, 임원진은 `/api/executive` */
+  apiRoot?: string;
 }
 
 const DEFAULT_YEARS = [2023, 2024, 2025];
@@ -59,6 +61,7 @@ export function PartnerDetailSheet({
   onClose,
   onSaved,
   canEdit,
+  apiRoot = "/api",
 }: PartnerDetailSheetProps) {
   const [open, setOpen] = useState(!!partnerId);
   const [partner, setPartner] = useState<PartnerDetail | null>(null);
@@ -105,7 +108,7 @@ export function PartnerDetailSheet({
       return;
     }
     setLoading(true);
-    fetch(`/api/partners/${partnerId}`)
+    fetch(`${apiRoot}/partners/${partnerId}`)
       .then((r) => r.json())
       .then((data) => {
         setPartner(data);
@@ -142,14 +145,14 @@ export function PartnerDetailSheet({
       })
       .catch(() => setPartner(null))
       .finally(() => setLoading(false));
-  }, [partnerId, eventYears]);
+  }, [partnerId, eventYears, apiRoot]);
 
   const handleSave = async () => {
     if (!canEdit) return;
     setSaving(true);
     try {
       if (partnerId === "new") {
-        const res = await fetch("/api/partners", {
+        const res = await fetch(`${apiRoot}/partners`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
@@ -158,7 +161,7 @@ export function PartnerDetailSheet({
         const created = await res.json();
         for (const y of Object.keys(events).map(Number).sort((a, b) => a - b)) {
           const ev = events[y];
-          await fetch(`/api/partners/${created.id}/events`, {
+          await fetch(`${apiRoot}/partners/${created.id}/events`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -178,7 +181,7 @@ export function PartnerDetailSheet({
         return;
       }
       if (partner?.id) {
-        const res = await fetch(`/api/partners/${partner.id}`, {
+        const res = await fetch(`${apiRoot}/partners/${partner.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
@@ -186,7 +189,7 @@ export function PartnerDetailSheet({
         if (!res.ok) throw new Error("수정 실패");
         for (const y of Object.keys(events).map(Number).sort((a, b) => a - b)) {
           const ev = events[y];
-          await fetch(`/api/partners/${partner.id}/events`, {
+          await fetch(`${apiRoot}/partners/${partner.id}/events`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -216,7 +219,7 @@ export function PartnerDetailSheet({
     if (!confirm("이 파트너를 삭제할까요?")) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/partners/${partner.id}`, { method: "DELETE" });
+      const res = await fetch(`${apiRoot}/partners/${partner.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("삭제 실패");
       toast.success("삭제되었습니다.");
       onSaved();

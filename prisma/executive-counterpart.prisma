@@ -1,0 +1,59 @@
+// 임원진 카운터파트 전용 DB (DATABASE_URL과 별도: EXECUTIVE_COUNTERPART_DATABASE_URL)
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma-executive-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("EXECUTIVE_COUNTERPART_DATABASE_URL")
+}
+
+model ExecutivePartner {
+  id                     String                   @id @default(cuid())
+  status                 String                   @default("active")
+  name                   String
+  phone                  String?                  @default("")
+  companyNormalized      String                   @default("")
+  department             String?                  @default("")
+  title                  String?                  @default("")
+  email                  String?                  @default("")
+  workPhone              String?                  @default("")
+  workFax                String?                  @default("")
+  address                String?                  @default("")
+  hq                     String?                  @default("")
+  businessCardDate       DateTime?
+  businessCardDateRaw    String?
+  employmentStatus       String                   @default("재직")
+  employmentUpdatedAt    DateTime?
+  employmentUpdatedAtRaw String?
+  history                String?                  @default("")
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  yearlyEvents           ExecutiveYearlyEvent[]
+
+  @@index([email])
+  @@index([companyNormalized])
+  @@index([status, employmentStatus])
+}
+
+model ExecutiveYearlyEvent {
+  id              String           @id @default(cuid())
+  partnerId       String
+  year            Int
+  danInvitedRaw   String?
+  danInviter      String?          @default("")
+  giftRecipient   String?          @default("")
+  giftSentRaw     String?
+  giftItem        String?          @default("")
+  giftQtyRaw      String?
+  giftSender      String?          @default("")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  partner ExecutivePartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, year])
+  @@index([year])
+  @@index([giftItem])
+}
