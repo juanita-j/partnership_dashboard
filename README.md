@@ -2,6 +2,8 @@
 
 파트너사 기본 정보와 연도별 DAN 초대/선물 발송을 관리하는 웹 대시보드입니다.
 
+**인수인계·처음 온보딩**: [ONBOARDING.md](./ONBOARDING.md) — 화면 구조, 디렉터리 맵, Cursor 활용 팁, Vercel 환경 변수 체크리스트.
+
 ## 기술 스택
 
 - **Frontend**: Next.js (App Router), TypeScript, TailwindCSS, shadcn/ui 스타일 컴포넌트, React Hook Form, Zod
